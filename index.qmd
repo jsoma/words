@@ -1,0 +1,11 @@
+---
+title: "J Soma's website???"
+listing:
+  contents: "*.ipynb"
+  sort: "date desc"
+  type: table
+  categories: true
+  feed:
+    items: 20
+    type: full
+---

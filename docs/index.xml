@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Jonathan Soma</title>
+<link>https://www.jonathansoma.com/words/index.html</link>
+<atom:link href="https://www.jonathansoma.com/words/index.xml" rel="self" type="application/rss+xml"/>
+<description></description>
+<generator>quarto-1.3.272</generator>
+<lastBuildDate>Sat, 18 Mar 2023 04:00:00 GMT</lastBuildDate>
+<item>
+  <title>Multi-language document Q&amp;A with LangChain and ChatGPT</title>
+  <dc:creator>Jonathan Soma</dc:creator>
+  <link>https://www.jonathansoma.com/words/multi-language-qa-gpt.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
+<section id="multi-language-document-qa-with-langchain-and-chatgpt" class="level1">
+<h1>Multi-language document Q&amp;A with LangChain and ChatGPT</h1>
+<section id="using-gpt-langchain-and-vector-stores-to-ask-questions-of-documents-in-languages-you-dont-speak" class="level2">
+<h2 class="anchored" data-anchor-id="using-gpt-langchain-and-vector-stores-to-ask-questions-of-documents-in-languages-you-dont-speak">Using GPT, LangChain, and vector stores to ask questions of documents in languages you don’t speak</h2>
+<p>We don’t speak Hungarian, but <strong>we demand to have my questions about Hungarian folktales answered!</strong> Let’s use GPT to do this for us!</p>
+<p><em>This might be useful if you’re doing a cross-border investigation, are interested in academic papers outside of your native tongue, or are just interested in learning how LangChain and document Q&amp;A works.</em></p>
+<p>In this tutorial, we’ll look at:</p>
+<ol type="1">
+<li>Why making ChatGPT read an whole book is impossible</li>
+<li>How to provide GPT (and other AI tools) with context to provide answers</li>
+</ol>
+<p>If you don’t want to read all of this nonsense you can go directly to the source and check out <a href="https://langchain.readthedocs.io/en/latest/use_cases/question_answering.html">Question Answering</a> or <a href="https://langchain.readthedocs.io/en/latest/modules/indexes/chain_examples/qa_with_sources.html">Question Answering with Sources</a>. This just adds a bit of multi-language sparkle on top!</p>
+</section>
+<section id="our-source-material" class="level2">
+<h2 class="anchored" data-anchor-id="our-source-material">Our source material</h2>
+<p><strong>We’ll begin by downloading the source material.</strong> If your original documents are in PDF form or anything like that, you’ll want to convert them to text first.</p>
+<p>Our reference is a book of folktales called <a href="https://www.gutenberg.org/ebooks/38852">Eredeti népmesék</a> by László Arany on Project Gutenberg. It’s just <a href="https://www.gutenberg.org/files/38852/38852-0.txt">a basic text file</a> so we can download it easily.</p>
+<div class="cell" data-execution_count="53">
+<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> requests</span>
+<span id="cb1-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> re</span>
+<span id="cb1-3"></span>
+<span id="cb1-4"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Gutenberg pretends everything is English, which</span></span>
+<span id="cb1-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># means "Hát gyöngyömadta" gets really mangled</span></span>
+<span id="cb1-6">response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> requests.get(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://www.gutenberg.org/files/38852/38852-0.txt"</span>)</span>
+<span id="cb1-7">text <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> response.content.decode(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"utf-8"</span>)</span>
+<span id="cb1-8"></span>
+<span id="cb1-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Cleaning up newlines</span></span>
+<span id="cb1-10">text <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> text.replace(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\r</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">""</span>)</span>
+<span id="cb1-11">text <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> re.sub(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">(?=[^</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">])"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">""</span>, text)</span>
+<span id="cb1-12"></span>
+<span id="cb1-13"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Saving the book</span></span>
+<span id="cb1-14"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">with</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">open</span>(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'book.txt'</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'w'</span>) <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> f:</span>
+<span id="cb1-15">    f.write(text)</span></code></pre></div>
+</div>
+<p>And the text is indeed in Hungarian:</p>
+<div class="cell" data-execution_count="186">
+<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1">text[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3000</span>:<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">3300</span>]</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="186">
+<pre><code>'be, de az is épen úgy járt, mint abátyja, ez is kiszaladt a szobából.\nHarmadik nap a legfiatalabb királyfin volt a sor; a bátyjai be se’akarták ereszteni, hogy ha ők ki nem tudták venni az apjokból, biz’ e’se’ sokra megy, de a királyfi nem tágitott, hanem bement. Mikor elmondtahogy m’ért jött, ehez '</code></pre>
+</div>
+</div>
+<p>Life would be nice if we could just feed it directly to ChatGPT and start asking questions, but <strong>you can’t make ChatGPT read a whole book</strong>. After it gets partway through the book ChatGPT starts forgetting the earlier pieces!</p>
+<p>There are a few tricks to get around this. We’ll work with one of the simplest for now:</p>
+<ol type="1">
+<li>Split our original text up into pieces</li>
+<li>Find the pieces most relevant to our question</li>
+<li>Send those pieces to ChatGPT along with our question</li>
+</ol>
+<p>Newer LLMs can deal with a lot more tokens at a time – GPT-4 has both an 8k and 32k version – but hey, we work with what we’ve got.</p>
+</section>
+<section id="part-1-split-our-original-text-up-into-pieces" class="level2">
+<h2 class="anchored" data-anchor-id="part-1-split-our-original-text-up-into-pieces">Part 1: Split our original text up into pieces</h2>
+<p>To do pretty much everything from here on out we’re relying on <a href="https://langchain.readthedocs.io/">LangChain</a>, a really fun library that allows you to bundle together different common tasks when working with language models. It’s best trick is chaining together AI at different steps in the process, but for the moment we’re just using its text search abilities.</p>
+<p>We’re going to split our text up into 1000-character chunks, which should be around 150-200 words apiece. I’m also going to add a little overlap.</p>
+<div class="cell" data-execution_count="112">
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.document_loaders <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> TextLoader</span>
+<span id="cb4-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.text_splitter <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> RecursiveCharacterTextSplitter</span>
+<span id="cb4-3"></span>
+<span id="cb4-4">loader <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> TextLoader(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'book.txt'</span>)</span>
+<span id="cb4-5">documents <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> loader.load()</span>
+<span id="cb4-6"></span>
+<span id="cb4-7">text_splitter <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> RecursiveCharacterTextSplitter(chunk_size<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>, chunk_overlap<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">100</span>)</span>
+<span id="cb4-8">docs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> text_splitter.split_documents(documents)</span></code></pre></div>
+</div>
+<p>Technically speaking I’m using a <code>RecursiveCharacterTextSplitter</code>, which tries to keep paragraphs and sentences and all of those things together, so it might go above or below 1000. But it should <em>generally</em> hit the mark.</p>
+<div class="cell" data-execution_count="113">
+<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">len</span>(docs)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="113">
+<pre><code>440</code></pre>
+</div>
+</div>
+<p>Overall this gave us just over 400 documents. Let’s pick one at random to check out, just to make sure things went okay.</p>
+<div class="cell" data-execution_count="124">
+<div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1">docs[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">109</span>]</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="124">
+<pre><code>Document(page_content='Mikor aztán eljött a lakodalom napja, felöltözött, de olyan ruhába, hogyTündérországban se igen látni párját sátoros ünnepkor se, csak elfogta acselédje szemefényét. Mire a királyi palotához ért, már ott ugyancsakszólott a muzsika, úgy tánczoltak, majd leszakadt a ház, még a süketnekis bokájába ment a szép muzsika.', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0)</code></pre>
+</div>
+</div>
+<p>It’s a little short, but it’s definitely part of the folktales. According to Google Translate:</p>
+<blockquote class="blockquote">
+<p>When the day of the wedding came, she dressed up, but in such a dress that one would not see her partner in a fairyland even during a tent festival, she only caught the eye of her mistress. By the time he got to the royal palace, the music was already playing there too, they were dancing like that, and then the house was torn apart, the beautiful music even went to the deaf man’s ankles</p>
+</blockquote>
+<p>Sounds like a pretty fun party!</p>
+</section>
+<section id="part-2-find-the-pieces-most-relevant-to-our-question" class="level2">
+<h2 class="anchored" data-anchor-id="part-2-find-the-pieces-most-relevant-to-our-question">Part 2: Find the pieces most relevant to our question</h2>
+<section id="featuring-text-embeddings-and-semantic-search" class="level3">
+<h3 class="anchored" data-anchor-id="featuring-text-embeddings-and-semantic-search">Featuring text embeddings and semantic search!</h3>
+<p>If we’re asking questions about a wedding, we can’t just look for the text <em>wedding</em> – our documents are in Hungarian, so that’s <em>lakodalom</em> (I think). Instead, we’re going to use someting called <strong>embeddings</strong>.</p>
+<p>Embeddings take a word, sentence, or snippet of text and turn it into a string of numbers. Take the sentences below as an example: I’ve scored each one of them as to how much they’re about shopping, home, and animals.</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>sentence</th>
+<th>shopping</th>
+<th>home</th>
+<th>animals</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>You should buy a house</td>
+<td>0.9</td>
+<td>0.8</td>
+<td>0</td>
+<td><code>(0.9, 0.8, 0.0)</code></td>
+</tr>
+<tr class="even">
+<td>The cat is in the house</td>
+<td>0</td>
+<td>1</td>
+<td>0.8</td>
+<td><code>(0.0, 1.0, 0.8)</code></td>
+</tr>
+<tr class="odd">
+<td>The dog bought a pet mouse</td>
+<td>1</td>
+<td>0.2</td>
+<td>1</td>
+<td><code>(1.0, 0.2, 1.0)</code></td>
+</tr>
+</tbody>
+</table>
+<p>Let’s say we a fourth sentence – <strong>the dog is at home</strong>. Our sentence might score <code>(0.0 1.0 0.9)</code> since it’s about home and animals, but not shipping. How can we find similar ones?</p>
+<p>Even though it doesn’t have any <em>words</em> that match <strong>the cat is in the house</strong>, its numbers are pretty close. That way a computer can say yes, sure, they’re probably about the same thing!</p>
+<p>Instead of reasonable categories like mine, though, actual embeddings have read the entire internet and decided on something like 384 or 512 difference things to rate your text on (and they definitely aren’t as simple as “animal”).</p>
+<blockquote class="blockquote">
+<p>You might want to read <a href="https://investigate.ai/text-analysis/word-embeddings/">my introduction to word embeddings</a> for more details and <a href="https://investigate.ai/text-analysis/document-similarity-using-word-embeddings/">conceptual document similarity</a>.</p>
+</blockquote>
+<p>There are all sorts of embeddings out there, that each score text based on different parameters. While not all of them support multiple languages, <a href="https://www.sbert.net/docs/pretrained_models.html#multi-lingual-models">it isn’t hard to find some that do</a>. We’re going to pick <code>paraphrase-multilingual-MiniLM-L12-v2</code> since it supports a delightful 50 languages. These multilingual embeddings have read enough sentences across the all-languages-speaking internet to <em>somehow</em> know things like that cat and lion and Katze and tygrys and 狮 are all vaguely feline.</p>
+<div class="cell" data-execution_count="146">
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.embeddings <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> HuggingFaceEmbeddings</span>
+<span id="cb9-2">embeddings <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> HuggingFaceEmbeddings(model_name<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'paraphrase-multilingual-MiniLM-L12-v2'</span>)</span></code></pre></div>
+</div>
+<p>In order to find the most relevant pieces of text, we’ll also need something that can store and search embeddings. That way when we want to find anything about <em>weddings</em> it won’t have a problem finding <em>lakodalom</em>.</p>
+<p>We’re going to use <a href="https://github.com/chroma-core/chroma">Chroma</a> for no real reason, just because it has a convenient LangChain extension.</p>
+<div class="cell" data-execution_count="187">
+<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># You'll probably need to install chromadb</span></span>
+<span id="cb10-2"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># !pip install chromadb</span></span></code></pre></div>
+</div>
+<div class="cell" data-execution_count="148">
+<div class="sourceCode cell-code" id="cb11" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.vectorstores <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> Chroma</span>
+<span id="cb11-2"></span>
+<span id="cb11-3">db <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> Chroma.from_documents(docs, embeddings)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Running Chroma using direct local API.
+Using DuckDB in-memory for database. Data will be transient.</code></pre>
+</div>
+</div>
+<p>Now that this is stored, we can search for weddings at a festival.</p>
+<div class="cell" data-execution_count="149">
+<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1">db.similarity_search(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"weddings at a festival with loud music"</span>, k<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="149">
+<pre><code>[Document(page_content='Eltelt az egy hónap, elérkezett az esküvő napja, ott volt a sok vendég,köztök a boltos is, csak a vőlegényt meg a menyasszonyt nem lehetettlátni. Bekövetkezett az ebéd ideje is, mindnyájan vígan ültek le azasztalhoz, elkezdtek enni. Az volt a szokás a gróf házánál, hogy mindenembernek egy kis külön tálban vitték az ételt; a boltos amint a magatáljából szedett levest, hát csak alig tudta megenni, olyan sótalanvolt, nézett körül só után, de nem volt az egész asztalon; a másodikétel még sótalanabb volt, a harmadik meg már olyan volt, hogy hozzá se’tudott nyúlni. Kérdezték tőle hogy mért nem eszik? tán valami baja vanaz ételnek? amint ott vallatták, eszébe jutott a lyánya, hogy az nekiazt mondta, hogy úgy szereti, mint a sót, elkezdett sírni; kérdeztékaztán tőle, hogy mért sír, akkor elbeszélt mindent, hogy volt neki egylyánya, az egyszer neki azt mondta, hogy úgy szereti mint a sót, őmegharagudott érte, elkergette a házától, lám most látja, hogy milyenigazságtalan volt iránta, milyen jó a só, ,,de hej ha még egyszervisszahozná az isten hozzám, majd meg is becsülném, első lenne aházamnál; meg is bántam én azt már sokszor, de már akkor késő volt.’’', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0)]</code></pre>
+</div>
+</div>
+<p>It’s a match!</p>
+</section>
+</section>
+<section id="part-3-send-the-matches-to-chatgpt-along-with-our-question" class="level2">
+<h2 class="anchored" data-anchor-id="part-3-send-the-matches-to-chatgpt-along-with-our-question">Part 3: Send the matches to ChatGPT along with our question</h2>
+<p>This is the part where <a href="https://langchain.readthedocs.io/">LangChain</a> really shines. We just say “hey, go get the relevant pieces from our database, then go talk to GPT for us!”</p>
+<p>First, we’ll fire up our connection to GPT.</p>
+<div class="cell" data-execution_count="166">
+<div class="sourceCode cell-code" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.llms <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> OpenAI</span>
+<span id="cb15-2"></span>
+<span id="cb15-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Connect to GPT-3.5 turbo</span></span>
+<span id="cb15-4">openai_api_key <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"sk-..."</span></span>
+<span id="cb15-5"></span>
+<span id="cb15-6">llm <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> OpenAI(</span>
+<span id="cb15-7">    model_name<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gpt-3.5-turbo"</span>,</span>
+<span id="cb15-8">    temperature<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>,</span>
+<span id="cb15-9">    openai_api_key<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>openai_api_key)</span></code></pre></div>
+</div>
+<p>Second, we’ll put together our vector-based Q&amp;A. This is a custom LangChain tool that hooks the pieces together for us.</p>
+<div class="cell" data-execution_count="190">
+<div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Vector-database-based Q&amp;A</span></span>
+<span id="cb16-2">qa <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> VectorDBQA.from_chain_type(</span>
+<span id="cb16-3">    llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm,</span>
+<span id="cb16-4">    chain_type<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"stuff"</span>,</span>
+<span id="cb16-5">    vectorstore<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>db</span>
+<span id="cb16-6">)</span></code></pre></div>
+</div>
+</section>
+<section id="lets-see-it-in-action" class="level2">
+<h2 class="anchored" data-anchor-id="lets-see-it-in-action">Let’s see it in action!</h2>
+<p>I’m going to ask some questions about Zsuzska, who according to some passages apparently stole some of the devil’s belongings</p>
+<div class="cell" data-execution_count="167">
+<div class="sourceCode cell-code" id="cb17" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What did Zsuzska steal from the devil?"</span></span>
+<span id="cb17-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="167">
+<pre><code>'The tenger-ütő pálczát (sea-beating stick).'</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="168">
+<div class="sourceCode cell-code" id="cb19" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Why did Zsuzska steal from the devil?"</span></span>
+<span id="cb19-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="168">
+<pre><code>"Zsuzska was forced to steal from the devil by the king, who threatened her with death if she didn't."</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="169">
+<div class="sourceCode cell-code" id="cb21" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Why were the king's aunts jealous of Zsuzska?"</span></span>
+<span id="cb21-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="169">
+<pre><code>"The king's aunts were jealous of Zsuzskát because the king had grown to love her and they wanted to undermine her by claiming that she could not steal the devil's golden cabbage head."</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="170">
+<div class="sourceCode cell-code" id="cb23" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Who did Janko marry?"</span></span>
+<span id="cb23-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="170">
+<pre><code>'Janko married a beautiful princess.'</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="171">
+<div class="sourceCode cell-code" id="cb25" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"How did Janko meet the king's daughter?"</span></span>
+<span id="cb25-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="171">
+<pre><code>"The context does not provide information on a character named Janko meeting the king's daughter."</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="172">
+<div class="sourceCode cell-code" id="cb27" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Who was the bloody cow?"</span></span>
+<span id="cb27-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="172">
+<pre><code>'The bloody cow was a cow that Ferkó rode away on after throwing the lasso at it.'</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="173">
+<div class="sourceCode cell-code" id="cb29" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Why was Ferko's mother disguised as a cow?"</span></span>
+<span id="cb29-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="173">
+<pre><code>"Ferko's mother was not disguised as a cow, but rather the red cow was actually Ferko's mother, the first queen."</code></pre>
+</div>
+</div>
+</section>
+<section id="improving-our-matches" class="level2">
+<h2 class="anchored" data-anchor-id="improving-our-matches">Improving our matches</h2>
+<p>When we asked what was stolen from the devil, we were told “The tenger-ütő pálczát (sea-beating stick).” I know for a fact more things were stolen than that!</p>
+<p>If we provide more context, we can hopefully get better answers. We have two options:</p>
+<ul>
+<li>Increase the size of our window/include more overlap</li>
+<li>Provide more documents to GPT as context when asking for an answer</li>
+</ul>
+<p>Since I haven’t seen the second one show up too many places, let’s do that instead. We’ll increase the number of results to provide as context to eight by passing with <code>k=8</code>.</p>
+<div class="cell" data-execution_count="174">
+<div class="sourceCode cell-code" id="cb31" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1">qa <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> VectorDBQA.from_chain_type(</span>
+<span id="cb31-2">    llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm,</span>
+<span id="cb31-3">    chain_type<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"stuff"</span>,</span>
+<span id="cb31-4">    vectorstore<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>db,</span>
+<span id="cb31-5">    k<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">8</span></span>
+<span id="cb31-6">)</span></code></pre></div>
+</div>
+<p>At this point we have to be careful of two things: money and token limits.</p>
+<ol type="1">
+<li><strong>Money:</strong> Larger requests cost more.</li>
+<li><strong>Token limits</strong> We have around 3,000 words to work with for each GPT-3.5 request. If each chunk is up to 250 words long, this gets us up to 2,000 words. We should be safe!</li>
+</ol>
+<p>But we want good answers, right??? Let’s see if it works:</p>
+<div class="cell" data-execution_count="175">
+<div class="sourceCode cell-code" id="cb32" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What did Zsuzská steal from the devil?"</span></span>
+<span id="cb32-2">qa.run(query)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="175">
+<pre><code>"Zsuzska stole the devil's tenger-ütő pálczája (sea-beating stick), tenger-lépő czipője (sea-stepping shoes), and arany kis gyermek (golden baby) in an arany bölcső (golden cradle). She also previously stole the devil's tenger-ütőpálczát (sea-beating stick) and arany fej káposztát (golden head cabbage)."</code></pre>
+</div>
+</div>
+<p>Perfect! That gold cabbage sounds great, and it’s almost time for lunch, so let’s wrap up with <em>one more thing</em>.</p>
+</section>
+<section id="seeing-the-context" class="level2">
+<h2 class="anchored" data-anchor-id="seeing-the-context">Seeing the context</h2>
+<p>If you’re having trouble getting good answers to your questions, it might be because the <strong>context you’re providing isn’t very good.</strong> I was actually having this issue earlier on with <code>distiluse-base-multilingual-cased-v2</code> before I switched to <code>paraphrase-multilingual-MiniLM-L12-v2</code>! I honestly don’t know the difference between them, just that one provided more relevant snippets to GPT.</p>
+<p>Let’s see what context is being provided to GPT for each search!</p>
+<section id="method-one-context-from-the-question" class="level3">
+<h3 class="anchored" data-anchor-id="method-one-context-from-the-question">Method one: Context from the question</h3>
+<p>To see what context is being sent to GPT, include the <code>return_source_documents=True</code> parameter.</p>
+<div class="cell" data-execution_count="176">
+<div class="sourceCode cell-code" id="cb34" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1">qa <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> VectorDBQA.from_chain_type(</span>
+<span id="cb34-2">    llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm,</span>
+<span id="cb34-3">    chain_type<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"stuff"</span>,</span>
+<span id="cb34-4">    vectorstore<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>db,</span>
+<span id="cb34-5">    return_source_documents<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span></span>
+<span id="cb34-6">)</span></code></pre></div>
+</div>
+<div class="cell" data-execution_count="181">
+<div class="sourceCode cell-code" id="cb35" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1">query <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What did Zsuzská steal from the devil?"</span></span>
+<span id="cb35-2">result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> qa({<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"query"</span>: query})</span></code></pre></div>
+</div>
+<div class="cell" data-execution_count="182">
+<div class="sourceCode cell-code" id="cb36" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1">result[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"result"</span>]</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="182">
+<pre><code>'Zsuzská stole the tenger-ütő pálczát (sea-beater stick) from the devil.'</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="183">
+<div class="sourceCode cell-code" id="cb38" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1">result[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"source_documents"</span>]</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="183">
+<pre><code>[Document(page_content='Hiába tagadta szegény Zsuzska, nem használt semmit, elindult hát nagyszomorúan. Épen éjfél volt, mikor az ördög házához ért, aludt az ördögis, a felesége is. Zsuzska csendesen belopódzott, ellopta a tenger-ütőpálczát, avval bekiáltott az ablakon.\n– Hej ördög, viszem ám már a tenger-ütő pálczádat is.\n– Hej kutya Zsuzska, megöletted három szép lyányomat, elloptad atenger-lépő czipőmet, most viszed a tenger-ütő pálczámat, de majdmeglakolsz te ezért.\nUtána is szaladt, de megint csak a tengerparton tudott közel jutnihozzá, ott meg Zsuzska megütötte a tengert a tenger-ütő pálczával,kétfelé vált előtte, utána meg összecsapódott, megint nem foghatta megaz ördög. Zsuzska ment egyenesen a királyhoz.\n– No felséges király, elhoztam már a tengerütő pálczát is.', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0),
+ Document(page_content='De Zsuzska nem adta;,,Tán bolond vagyok, hogy visszaadjam, mikor kivülvagyok már vele az udvaron?!’’ Az ördög kergette egy darabig, de sehogyse tudta utolérni, utoljára is visszafordult, Zsuzska pedig mentegyenesen a király elibe, od’adta neki az arany fej káposztát.\n– No felséges király elhoztam már ezt is!\nA két nénjét Zsuzskának, majd hogy meg nem ütötte a guta, mikormegtudták, hogy Zsuzskának most se’ lett semmi baja, másnap megintbementek a királyhoz.\n– Jaj felséges király van még annak az ördögnek egy arany kis gyermekeis arany bölcsőben, Zsuzska azt beszéli fűnek-fának, hogy ő azt is eltudná lopni.\nMegint behivatta a király Zsuzskát.\n– Fiam Zsuzska, azt hallottam, hogy van annak az ördögnek egy arany kisgyermeke is, arany bölcsőben, te azt is el tudod lopni, azt beszélted,azért ha az éjjel el nem lopod, halálnak halálával halsz meg.', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0),
+ Document(page_content='– No felséges király, elhoztam már a tengerütő pálczát is.\nA király még jobban megszerette Zsuzskát, hogy olyan életre való, de anénjei még jobban irigykedtek rá, csakhamar megint avval árulták be,hogy van annak az ördögnek egy arany fej káposztája is, Zsuzska azt isel tudná lopni, azt mondta. A király megint ráparancsolt Zsuzskára erősparancsolattal, hogy ha a káposztát el nem lopja, halálnak halálával halmeg.\nElindult hát szegény Zsuzska megint, el is ért szerencsésen épen éjfélreaz ördög kertjibe, levágta az arany fej káposztát, avval bekiáltott azablakon.\n– Hej ördög, viszem ám már az arany fej káposztádat is.\n– Hej kutya Zsuzska, megöletted három szép lyányomat, elloptad atenger-lépő czipőmet, elloptad a tenger-ütő pálczámat, most viszed azarany fej káposztámat, csak ezt az egyet add vissza, soha szemedre sevetem.', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0),
+ Document(page_content='Zsuzska csak nevette, de majd hogy sírás nem lett a nevetésből, mert azördög utána iramodott, Zsuzska meg nem igen tudott a nehéz bölcsővelszaladni, úgy annyira, hogy mire a tengerparthoz értek, tiz lépés nemsok, de annyi se volt köztök, hanem ott aztán Zsuzska felrántotta atenger-lépő czipőt, úgy átlépte vele a tengert, mint ha ott se lettvolna, avval mént egyenesen a király elibe, od’adta neki az arany kisgyermeket.\nA király a mint meglátta, csak egy szikrába mult, hogy össze-vissza nemcsókolta Zsuzskát, de az is csak egy cseppbe mult ám, hogy a két nénjemeg nem pukkadt mérgibe, mikor meghallotta, hogy Zsuzska megintvisszakerült. Fúrta az oldalukat rettenetesen az irigység, mert látták,hogy a király napról-napra jobban szereti Zsuzskát. Bementek hát akirályhoz megint, azt hazudták neki hogy Zsuzska azt mondta, hogy vanannak az ördögnek egy zsák arany diója, ő azt is el tudná lopni.\nMaga elibe parancsolta a király megint Zsuzskát:', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0)]</code></pre>
+</div>
+</div>
+</section>
+<section id="method-two-just-ask-your-database" class="level3">
+<h3 class="anchored" data-anchor-id="method-two-just-ask-your-database">Method two: Just ask your database</h3>
+<p>If you already know what GPT is going to say in response and you’re debugging on specific query, you can just ask your database what the relevant snippets are!</p>
+<div class="cell" data-execution_count="189">
+<div class="sourceCode cell-code" id="cb40" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1">db.similarity_search(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What did Zsuzská steal from the devil?"</span>, k<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="189">
+<pre><code>[Document(page_content='Hiába tagadta szegény Zsuzska, nem használt semmit, elindult hát nagyszomorúan. Épen éjfél volt, mikor az ördög házához ért, aludt az ördögis, a felesége is. Zsuzska csendesen belopódzott, ellopta a tenger-ütőpálczát, avval bekiáltott az ablakon.\n– Hej ördög, viszem ám már a tenger-ütő pálczádat is.\n– Hej kutya Zsuzska, megöletted három szép lyányomat, elloptad atenger-lépő czipőmet, most viszed a tenger-ütő pálczámat, de majdmeglakolsz te ezért.\nUtána is szaladt, de megint csak a tengerparton tudott közel jutnihozzá, ott meg Zsuzska megütötte a tengert a tenger-ütő pálczával,kétfelé vált előtte, utána meg összecsapódott, megint nem foghatta megaz ördög. Zsuzska ment egyenesen a királyhoz.\n– No felséges király, elhoztam már a tengerütő pálczát is.', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0),
+ Document(page_content='De Zsuzska nem adta;,,Tán bolond vagyok, hogy visszaadjam, mikor kivülvagyok már vele az udvaron?!’’ Az ördög kergette egy darabig, de sehogyse tudta utolérni, utoljára is visszafordult, Zsuzska pedig mentegyenesen a király elibe, od’adta neki az arany fej káposztát.\n– No felséges király elhoztam már ezt is!\nA két nénjét Zsuzskának, majd hogy meg nem ütötte a guta, mikormegtudták, hogy Zsuzskának most se’ lett semmi baja, másnap megintbementek a királyhoz.\n– Jaj felséges király van még annak az ördögnek egy arany kis gyermekeis arany bölcsőben, Zsuzska azt beszéli fűnek-fának, hogy ő azt is eltudná lopni.\nMegint behivatta a király Zsuzskát.\n– Fiam Zsuzska, azt hallottam, hogy van annak az ördögnek egy arany kisgyermeke is, arany bölcsőben, te azt is el tudod lopni, azt beszélted,azért ha az éjjel el nem lopod, halálnak halálával halsz meg.', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0)]</code></pre>
+</div>
+</div>
+<p>You can keep playing with your <code>k</code> values until you get what you think is enough context.</p>
+</section>
+</section>
+<section id="improvements-and-next-steps" class="level2">
+<h2 class="anchored" data-anchor-id="improvements-and-next-steps">Improvements and next steps</h2>
+<p>This is a collection of folktales, not one long story. That means asking about something like a wedding might end up mixing together all sorts of different stories! Our next step will allow us to add other books, filter stories from one another, and more techniques that can help with larger, more complex datasets.</p>
+<p>If you’re interested in hearing when it comes out, feel free to follow me <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a> or <a href="https://tinyletter.com/jsoma">hop on my mailing list</a>. Questions, comments, and blind cat adoption inquiries can go to <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>.</p>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <guid>https://www.jonathansoma.com/words/multi-language-qa-gpt.html</guid>
+  <pubDate>Sat, 18 Mar 2023 04:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>

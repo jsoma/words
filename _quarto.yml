@@ -1,0 +1,21 @@
+project:
+  type: website
+  output-dir: docs
+
+site:
+  title: "Jonathan Soma"
+  site-url: https://www.jonathansoma.com/words/
+
+website:
+  site-url: https://www.jonathansoma.com/words/
+  open-graph: true
+  twitter-card:
+    creator: "@dangerscarf"
+  
+format:
+  html:
+    css: style.css
+    theme: cosmo
+    title-block: none
+    title-block-banner: "#fff880"
+    title-block-banner-color: black
