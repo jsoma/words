@@ -10,7 +10,7 @@
 <meta name="dcterms.date" content="2023-03-18">
 <meta name="description" content="How to ask questions of documents when the documents are in foreign languages">
 
-<title>Jonathan Soma - Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</title>
+<title>j soma - Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -94,6 +94,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-submit-button-title": "Submit"
   }
 }</script>
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-1W7890GDTM"></script>
+
+<script type="text/javascript">
+
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-1W7890GDTM', { 'anonymize_ip': true});
+</script>
 <style>
     .quarto-title-block .quarto-title-banner,
     .quarto-title-block .quarto-title-banner h1,
@@ -110,6 +119,16 @@ background: #fff880;
 
 
 <link rel="stylesheet" href="style.css">
+<meta property="og:title" content="j soma - Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo">
+<meta property="og:description" content="How to ask questions of documents when the documents are in foreign languages">
+<meta property="og:image" content="https://jonathansoma.com/words/assets/where-are-things.png">
+<meta property="og:site-name" content="j soma">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:title" content="j soma - Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo">
+<meta name="twitter:description" content="How to ask questions of documents when the documents are in foreign languages">
+<meta name="twitter:image" content="https://jonathansoma.com/words/assets/where-are-things.png">
+<meta name="twitter:creator" content="@dangerscarf">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="fullcontent">
@@ -164,14 +183,14 @@ background: #fff880;
 <h1>Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</h1>
 <section id="using-gpt-langchain-and-vector-stores-to-ask-questions-of-documents-in-languages-you-dont-speak" class="level2">
 <h2 class="anchored" data-anchor-id="using-gpt-langchain-and-vector-stores-to-ask-questions-of-documents-in-languages-you-dont-speak">Using GPT, LangChain, and vector stores to ask questions of documents in languages you don’t speak</h2>
-<p>I don’t speak Hungarian, but <strong>I demand to have my questions about Hungarian folktales answered!</strong> Let’s use GPT to do this for us!</p>
+<p>I don’t speak Hungarian, but <strong>I demand to have my questions about Hungarian folktales answered!</strong> Let’s use GPT to do this for us.</p>
 <p><em>This might be useful if you’re doing a cross-border investigation, are interested in academic papers outside of your native tongue, or are just interested in learning how LangChain and document Q&amp;A works.</em></p>
 <p>In this tutorial, we’ll look at:</p>
 <ol type="1">
 <li>Why making ChatGPT read an whole book is impossible</li>
 <li>How to provide GPT (and other AI tools) with context to provide answers</li>
 </ol>
-<p>If you don’t want to read all of this nonsense you can go directly to the source and check out <a href="https://langchain.readthedocs.io/en/latest/use_cases/question_answering.html">Question Answering</a> or <a href="https://langchain.readthedocs.io/en/latest/modules/indexes/chain_examples/qa_with_sources.html">Question Answering with Sources</a>. This just adds a bit of multi-language sparkle on top!</p>
+<p>If you don’t want to read all of this nonsense you can go directly to the LangChain source and check out <a href="https://langchain.readthedocs.io/en/latest/use_cases/question_answering.html">Question Answering</a> or <a href="https://langchain.readthedocs.io/en/latest/modules/indexes/chain_examples/qa_with_sources.html">Question Answering with Sources</a>. This just adds a bit of multi-language sparkle on top!</p>
 </section>
 <section id="our-source-material" class="level2">
 <h2 class="anchored" data-anchor-id="our-source-material">Our source material</h2>
@@ -205,16 +224,16 @@ Nagyon megilletődött ezen a beszéden a király, nemhogy megölte volnaezért 
 </div>
 <p>Luckily for us, GPT speaks Hungarian! So if we tell it to read the book, it’ll be able to answer all of our English-language questions without a problem. But there’s one problem: the book is <em>not</em> a short tiny paragraph.</p>
 <p>Life would be nice if we could just feed it directly to ChatGPT and start asking questions, but <strong>you can’t make ChatGPT read a whole book</strong>. After it gets partway through the book ChatGPT starts forgetting the earlier pieces!</p>
-<p>There are a few tricks to get around this. We’ll work with one of the simplest for now:</p>
+<p>There are a few tricks to get around this when asking a question. We’ll work with one of the simplest for now:</p>
 <ol type="1">
-<li>Split our original text up into pieces</li>
-<li>Find the pieces most relevant to our question</li>
-<li>Send those pieces to GPT along with our question</li>
+<li>Split our original text up into smaller passages</li>
+<li>Find the passages most relevant to our question</li>
+<li>Send those passages to GPT along with our question</li>
 </ol>
-<p>Newer LLMs can deal with a lot more tokens at a time – GPT-4 has both an 8k and 32k version – but hey, we work with what we’ve got.</p>
+<p>Newer LLMs can deal with a lot more tokens at a time – GPT-4 has both an 8k and 32k version – but hey, I don’t have an invite and we work with what we’ve got.</p>
 </section>
-<section id="part-1-split-our-original-text-up-into-pieces" class="level2">
-<h2 class="anchored" data-anchor-id="part-1-split-our-original-text-up-into-pieces">Part 1: Split our original text up into pieces</h2>
+<section id="part-1-split-our-original-text-up-into-passages" class="level2">
+<h2 class="anchored" data-anchor-id="part-1-split-our-original-text-up-into-passages">Part 1: Split our original text up into passages</h2>
 <p>To do pretty much everything from here on out we’re relying on <a href="https://langchain.readthedocs.io/">LangChain</a>, a really fun library that allows you to bundle together different common tasks when working with language models. It’s best trick is chaining together AI at different steps in the process, but for the moment we’re just using its text search abilities.</p>
 <p>We’re going to split our text up into 1000-character chunks, which should be around 150-200 words apiece. I’m also going to add a little overlap.</p>
 <div class="cell" data-execution_count="112">
@@ -247,8 +266,8 @@ Nagyon megilletődött ezen a beszéden a király, nemhogy megölte volnaezért 
 </blockquote>
 <p>Sounds like a pretty fun party!</p>
 </section>
-<section id="part-2-find-the-pieces-most-relevant-to-our-question" class="level2">
-<h2 class="anchored" data-anchor-id="part-2-find-the-pieces-most-relevant-to-our-question">Part 2: Find the pieces most relevant to our question</h2>
+<section id="part-2-find-the-passages-most-relevant-to-our-question" class="level2">
+<h2 class="anchored" data-anchor-id="part-2-find-the-passages-most-relevant-to-our-question">Part 2: Find the passages most relevant to our question</h2>
 <section id="understanding-text-embeddings-and-semantic-search" class="level3">
 <h3 class="anchored" data-anchor-id="understanding-text-embeddings-and-semantic-search">Understanding text embeddings and semantic search</h3>
 <p>If we’re asking questions about a wedding, we can’t just look for the text <em>wedding</em> – our documents are in Hungarian, so that’s <em>lakodalom</em> (I think). Instead, we’re going to use someting called <strong>embeddings</strong>.</p>
@@ -290,21 +309,21 @@ Nagyon megilletődött ezen a beszéden a király, nemhogy megölte volnaezért 
 <p>Let’s say we have a fourth sentence – <strong>the dog is at home</strong>. I’ve decided it scores <code>(0.0 1.0 0.9)</code> since it’s about home and animals, but not shipping. How can we find a similar text?</p>
 <p><strong>The cat is in the house</strong> is the best match from our original list, <em>even though it doesn’t have any words that match</em>. But if we ignore the words and look at the scores, it’s clearly the best match! That’s more or less the basic idea behind text embeddings and semantic search.</p>
 <p>Instead of reasonable categories like mine, actual embeddings are something like 384 or 512 different dimensions your text is scored on. And unlike “shopping” or “animal” above, the dimensions aren’t anything you can understand. They’re generated by computers that have read a lot lot lot of the internet, so we just have to trust them!</p>
-<div class="callout-info">
+<blockquote class="blockquote">
 <p>You might want to read <a href="https://investigate.ai/text-analysis/word-embeddings/">my introduction to word embeddings</a> for more details and <a href="https://investigate.ai/text-analysis/document-similarity-using-word-embeddings/">conceptual document similarity</a>.</p>
-</div>
+</blockquote>
 </section>
 <section id="creating-and-searching-our-embeddings-database" class="level3">
 <h3 class="anchored" data-anchor-id="creating-and-searching-our-embeddings-database">Creating and searching our embeddings database</h3>
 <p>There are many, many embeddings out there, and they each score text differently. We need one that supports English (for our queries) and Hungarian (for the dataset): while not all of them support multiple languages, <a href="https://www.sbert.net/docs/pretrained_models.html#multi-lingual-models">it isn’t hard to find some that do</a>!</p>
 <p>We’re going to pick <code>paraphrase-multilingual-MiniLM-L12-v2</code> since it supports a delightful 50 languages. That way we can ask questions in French or Italian, or maybe add some Japanese folklore to the mix later on.</p>
-<p>These multilingual embeddings have read enough sentences across the all-languages-speaking internet to <em>somehow</em> know things like that cat and lion and Katze and tygrys and 狮 are all vaguely feline. At this point don’t need to know how it works, just that it gets the job done!</p>
 <div class="cell" data-execution_count="146">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.embeddings <span class="im">import</span> HuggingFaceEmbeddings</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>embeddings <span class="op">=</span> HuggingFaceEmbeddings(model_name<span class="op">=</span><span class="st">'paraphrase-multilingual-MiniLM-L12-v2'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>In order to find the most relevant pieces of text, we’ll also need something that can store and search embeddings. That way when we want to find anything about <em>weddings</em> it won’t have a problem finding <em>lakodalom</em>.</p>
-<p>We’re going to use <a href="https://github.com/chroma-core/chroma">Chroma</a> for no real reason, just because it has a convenient LangChain extension.</p>
+<p>These multilingual embeddings have read enough sentences across the all-languages-speaking internet to <em>somehow</em> know things like that cat and lion and Katze and tygrys and 狮 are all vaguely feline. At this point don’t need to know how it works, just that it gets the job done!</p>
+<p>In order to find the most relevant pieces of text, we’ll also need <strong>something that can store and search embeddings.</strong> That way when we want to find anything about <em>weddings</em> it won’t have a problem finding <em>lakodalom</em>.</p>
+<p>We’re going to use <a href="https://github.com/chroma-core/chroma">Chroma</a> for no real reason, just because it has a convenient LangChain extension. It sets the whole thing up in one line of code - we just need to give it our documents and the embeddings model.</p>
 <div class="cell" data-execution_count="187">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># You'll probably need to install chromadb</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="co"># !pip install chromadb</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -318,32 +337,34 @@ Nagyon megilletődött ezen a beszéden a király, nemhogy megölte volnaezért 
 Using DuckDB in-memory for database. Data will be transient.</code></pre>
 </div>
 </div>
-<p>Now that this is stored, we can search for weddings at a festival.</p>
+<p>Now that everything is stored in our searchable Chroma database, we can look for passages about weddings at a festival.</p>
 <div class="cell" data-execution_count="149">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>db.similarity_search(<span class="st">"weddings at a festival with loud music"</span>, k<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># k=1 because we only want one result</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>db.similarity_search(<span class="st">"weddings at a festival with loud music"</span>, k<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="149">
 <pre><code>[Document(page_content='Eltelt az egy hónap, elérkezett az esküvő napja, ott volt a sok vendég,köztök a boltos is, csak a vőlegényt meg a menyasszonyt nem lehetettlátni. Bekövetkezett az ebéd ideje is, mindnyájan vígan ültek le azasztalhoz, elkezdtek enni. Az volt a szokás a gróf házánál, hogy mindenembernek egy kis külön tálban vitték az ételt; a boltos amint a magatáljából szedett levest, hát csak alig tudta megenni, olyan sótalanvolt, nézett körül só után, de nem volt az egész asztalon; a másodikétel még sótalanabb volt, a harmadik meg már olyan volt, hogy hozzá se’tudott nyúlni. Kérdezték tőle hogy mért nem eszik? tán valami baja vanaz ételnek? amint ott vallatták, eszébe jutott a lyánya, hogy az nekiazt mondta, hogy úgy szereti, mint a sót, elkezdett sírni; kérdeztékaztán tőle, hogy mért sír, akkor elbeszélt mindent, hogy volt neki egylyánya, az egyszer neki azt mondta, hogy úgy szereti mint a sót, őmegharagudott érte, elkergette a házától, lám most látja, hogy milyenigazságtalan volt iránta, milyen jó a só, ,,de hej ha még egyszervisszahozná az isten hozzám, majd meg is becsülném, első lenne aházamnál; meg is bántam én azt már sokszor, de már akkor késő volt.’’', lookup_str='', metadata={'source': 'book.txt'}, lookup_index=0)]</code></pre>
 </div>
 </div>
-<p>It’s a match! Now we’ll use this to find passages relevant to our question, that we’ll then pass along to GPT as context for our questions.</p>
+<p>It’s a match! In the next step we’ll use this process to find passages related to our question, then we’ll then pass those along to GPT as context for our questions.</p>
 </section>
 </section>
 <section id="part-3-send-the-matches-to-gpt-along-with-our-question" class="level2">
 <h2 class="anchored" data-anchor-id="part-3-send-the-matches-to-gpt-along-with-our-question">Part 3: Send the matches to GPT along with our question</h2>
-<p>This is the part where <a href="https://langchain.readthedocs.io/">LangChain</a> really shines. We just say “hey, go get the relevant pieces from our database, then go talk to GPT for us!”</p>
-<p>First, we’ll fire up our connection to GPT (you’ll need to provide your own API key!).</p>
+<p>This is the part where <a href="https://langchain.readthedocs.io/">LangChain</a> really shines. We just say “hey, go get the relevant passages from our database, then go talk to GPT for us!”</p>
+<p>First, we’ll fire up our connection to GPT (you’ll need to provide your own API key!). In this case we’re specifically using GPT-3.5-turbo, because we aren’t cool enough to have GPT-4 yet.</p>
 <div class="cell" data-execution_count="166">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.llms <span class="im">import</span> OpenAI</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Connect to GPT-3.5 turbo</span></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>openai_api_key <span class="op">=</span> <span class="st">"sk-..."</span></span>
 <span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>llm <span class="op">=</span> OpenAI(</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    model_name<span class="op">=</span><span class="st">"gpt-3.5-turbo"</span>,</span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    temperature<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    openai_api_key<span class="op">=</span>openai_api_key)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Use temperature=0 to get the same results every time</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>llm <span class="op">=</span> OpenAI(</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    model_name<span class="op">=</span><span class="st">"gpt-3.5-turbo"</span>,</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    temperature<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    openai_api_key<span class="op">=</span>openai_api_key)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Second, we’ll put together our vector-based Q&amp;A. This is a custom LangChain tool that takes our original question, finds relevant passages, and packages it all up to send over to GPT.</p>
+<p>Second, we’ll put together our vector-based Q&amp;A. This is a custom LangChain tool that takes our original question, finds relevant passages, and packages it all up to send over to the large language model (in this case, GPT).</p>
 <div class="cell" data-execution_count="190">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Vector-database-based Q&amp;A</span></span>
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> VectorDBQA.from_chain_type(</span>
@@ -355,7 +376,7 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 </section>
 <section id="lets-see-it-in-action" class="level2">
 <h2 class="anchored" data-anchor-id="lets-see-it-in-action">Let’s see it in action!</h2>
-<p>I’m going to ask some questions about Zsuzska, who according to some passages apparently stole some of the devil’s belongings! I don’t really know anything about her, this is just from a couple random passages I translated for myself.</p>
+<p>I’m going to ask some questions about Zsuzska, who according to some passages apparently stole some of the devil’s belongings (I don’t really know anything about her, this is just from a couple random passages I translated for myself!).</p>
 <div class="cell" data-execution_count="167">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"What did Zsuzska steal from the devil?"</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>qa.run(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -370,6 +391,7 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 <pre><code>"Zsuzska was forced to steal from the devil by the king, who threatened her with death if she didn't."</code></pre>
 </div>
 </div>
+<p>A previous time I ran this query GPT explained that the king’s aunts were jealous of Zsuzska, and they were the ones who convinced the king to make the demand of her. Since it’s been lost to the sands of time, maybe GPT can provide some more details.</p>
 <div class="cell" data-execution_count="169">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"Why were the king's aunts jealous of Zsuzska?"</span></span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>qa.run(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -377,7 +399,7 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 <pre><code>"The king's aunts were jealous of Zsuzskát because the king had grown to love her and they wanted to undermine her by claiming that she could not steal the devil's golden cabbage head."</code></pre>
 </div>
 </div>
-<p>That’s a good amount of information about Zsuzskat! Let’s try another character, Janko.</p>
+<p>That’s a good amount of information about Zsuzska! Let’s try another character, Janko.</p>
 <div class="cell" data-execution_count="170">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"Who did Janko marry?"</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>qa.run(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -412,12 +434,12 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 <section id="improving-our-answers-from-gpt" class="level2">
 <h2 class="anchored" data-anchor-id="improving-our-answers-from-gpt">Improving our answers from GPT</h2>
 <p>When we asked what was stolen from the devil, we were told “The tenger-ütő pálczát (sea-beating stick).” I know for a fact more things were stolen than that!</p>
-<p>If we provide better context, we can hopefully get better answers. Usually “better context” means “more context,” so we have two major options:</p>
+<p><strong>If we provide better context, we can hopefully get better answers.</strong> Usually “better context” means “more context,” so we have two major options:</p>
 <ul>
 <li>Increase the size of our window/include more overlap so passages are longer</li>
-<li>Provide more passages to GPT as context when asking for an answer (the default is 4)</li>
+<li>Provide more passages to GPT as context when asking for an answer</li>
 </ul>
-<p>Since I haven’t seen the second one show up too many places, let’s do that instead. We’ll increase the number of results to provide as context to eight by passing with <code>k=8</code>.</p>
+<p>Since I haven’t seen the second one show up too many places, let’s do that one. We’ll increase the number of passages to provide as context by adding <code>k=8</code> (by default it sends 4 passages).</p>
 <div class="cell" data-execution_count="174">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> VectorDBQA.from_chain_type(</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    llm<span class="op">=</span>llm,</span>
@@ -428,8 +450,8 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 </div>
 <p>At this point we have to be careful of two things: money and token limits.</p>
 <ol type="1">
-<li><strong>Money:</strong> Larger requests cost more.</li>
-<li><strong>Token limits</strong> We have around 3,000 words to work with for each GPT-3.5 request. If each chunk is up to 250 words long, this gets us up to 2,000 words. We should be safe!</li>
+<li><strong>Money:</strong> Larger requests that include more tokens (words, characters) cost more.</li>
+<li><strong>Token limits:</strong> We have around 3,000 words to work with for each GPT-3.5 request. If each chunk is up to 250 words long, this gets us up to 2,000 words before we add in our question. We should be safe!</li>
 </ol>
 <p>But we want good answers, right??? <strong>Let’s see if it works:</strong></p>
 <div class="cell" data-execution_count="175">
@@ -443,11 +465,12 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 </section>
 <section id="seeing-the-context" class="level2">
 <h2 class="anchored" data-anchor-id="seeing-the-context">Seeing the context</h2>
-<p>If you’re having trouble getting good answers to your questions, it might be because the <strong>context you’re providing isn’t very good.</strong> I was actually having this issue earlier on with <code>distiluse-base-multilingual-cased-v2</code> before I switched to <code>paraphrase-multilingual-MiniLM-L12-v2</code>! I honestly don’t know the difference between them, just that one provided more relevant snippets to GPT.</p>
-<p>Let’s see what context is being provided to GPT for each search!</p>
+<p>If you’re having trouble getting good answers to your questions, it might be because the <strong>context you’re providing isn’t very good.</strong></p>
+<p>I was actually having not-so-great answers earlier, but when I changed from the <code>distiluse-base-multilingual-cased-v2</code> embeddings to the <code>paraphrase-multilingual-MiniLM-L12-v2</code> embeddings all the context passages became so much more relavant! I honestly don’t know the difference between them, just that one provided more useful snippets to GPT.</p>
+<p>To help debug similar situations, let’s look at how to inspect the context that is being provided to GPT with each search!</p>
 <section id="method-one-context-from-the-question" class="level3">
 <h3 class="anchored" data-anchor-id="method-one-context-from-the-question">Method one: Context from the question</h3>
-<p>To see what context is being sent to GPT, include the <code>return_source_documents=True</code> parameter.</p>
+<p>We can plug right into our <code>VectorDBQA</code> to see what context is being sent to GPT. To do this, just include the <code>return_source_documents=True</code> parameter.</p>
 <div class="cell" data-execution_count="176">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> VectorDBQA.from_chain_type(</span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>    llm<span class="op">=</span>llm,</span>
@@ -460,6 +483,11 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 <div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"What did Zsuzská steal from the devil?"</span></span>
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> qa({<span class="st">"query"</span>: query})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<p>Now the response has two pieces instead of just being plain text:</p>
+<ul>
+<li><code>result</code> is the actual text response</li>
+<li><code>source_documents</code> are the passages provided as context</li>
+</ul>
 <div class="cell" data-execution_count="182">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>result[<span class="st">"result"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="182">
@@ -478,7 +506,7 @@ Using DuckDB in-memory for database. Data will be transient.</code></pre>
 </section>
 <section id="method-two-just-ask-your-database" class="level3">
 <h3 class="anchored" data-anchor-id="method-two-just-ask-your-database">Method two: Just ask your database</h3>
-<p>If you already know what GPT is going to say in response and you’re debugging on specific query, you can just ask your database what the relevant snippets are!</p>
+<p>If you already know what GPT is going to say in response and you’re debugging a specific query, you can just ask your database what the relevant snippets are! That way you avoid the costs of actually talking to the API.</p>
 <div class="cell" data-execution_count="189">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>db.similarity_search(<span class="st">"What did Zsuzská steal from the devil?"</span>, k<span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="189">

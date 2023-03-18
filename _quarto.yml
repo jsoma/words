@@ -2,15 +2,16 @@ project:
   type: website
   output-dir: docs
 
-site:
-  title: "Jonathan Soma"
-  site-url: https://www.jonathansoma.com/words/
-
 website:
-  site-url: https://www.jonathansoma.com/words/
-  open-graph: true
+  title: "j soma"
+  site-url: https://jonathansoma.com/words/
+  open-graph:
+    locale: en_US
+    image: "https://jonathansoma.com/words/assets/where-are-things.png"
   twitter-card:
     creator: "@dangerscarf"
+    image: "https://jonathansoma.com/words/assets/where-are-things.png"
+  google-analytics: G-1W7890GDTM
   
 format:
   html:

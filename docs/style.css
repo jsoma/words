@@ -16,7 +16,6 @@ pre>code {
     background: #80f8ff;
     color: black;
     padding: 5px 10px;
-    text-decoration: none;
 }
 
 
@@ -24,7 +23,6 @@ p a {
     background: #fff880;
     color: black;
     padding: 0px;
-    text-decoration: none;
 }
 
 @media (min-width:600px)  { 
