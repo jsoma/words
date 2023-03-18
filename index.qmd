@@ -1,5 +1,5 @@
 ---
-title: "J Soma's website???"
+title: "An awful default creation of Jonathan Soma"
 listing:
   contents: "*.ipynb"
   sort: "date desc"

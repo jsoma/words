@@ -10,7 +10,7 @@
 <meta name="dcterms.date" content="2023-03-18">
 <meta name="description" content="How to ask questions of documents when the documents are in foreign languages">
 
-<title>Jonathan Soma - Multi-language document Q&amp;A with LangChain and ChatGPT</title>
+<title>Jonathan Soma - Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -119,7 +119,7 @@ background: #fff880;
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Multi-language document Q&amp;A with LangChain and ChatGPT</h1>
+      <h1 class="title">Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</h1>
                   <div>
         <div class="description">
           How to ask questions of documents when the documents are in foreign languages
@@ -160,11 +160,11 @@ background: #fff880;
 
 
 <p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
-<section id="multi-language-document-qa-with-langchain-and-chatgpt" class="level1">
-<h1>Multi-language document Q&amp;A with LangChain and ChatGPT</h1>
+<section id="multi-language-document-qa-with-langchain-and-gpt-3.5-turbo" class="level1">
+<h1>Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</h1>
 <section id="using-gpt-langchain-and-vector-stores-to-ask-questions-of-documents-in-languages-you-dont-speak" class="level2">
 <h2 class="anchored" data-anchor-id="using-gpt-langchain-and-vector-stores-to-ask-questions-of-documents-in-languages-you-dont-speak">Using GPT, LangChain, and vector stores to ask questions of documents in languages you don’t speak</h2>
-<p>We don’t speak Hungarian, but <strong>we demand to have my questions about Hungarian folktales answered!</strong> Let’s use GPT to do this for us!</p>
+<p>I don’t speak Hungarian, but <strong>I demand to have my questions about Hungarian folktales answered!</strong> Let’s use GPT to do this for us!</p>
 <p><em>This might be useful if you’re doing a cross-border investigation, are interested in academic papers outside of your native tongue, or are just interested in learning how LangChain and document Q&amp;A works.</em></p>
 <p>In this tutorial, we’ll look at:</p>
 <ol type="1">
@@ -203,12 +203,13 @@ Harmadik nap a legfiatalabb királyfin volt a sor; a bátyjai be se’akarták e
 Nagyon megilletődött ezen a beszéden a király, nemhogy megölte volnaezért a fiát, hanem össze-vissza ölelte, csókolta. No kedves fiam –mondja neki – nem hiában voltál te egész életemben nekem legkedvesebbfiam, de látom most is te szántad el magad legjobban a halálra az énmeggyógyulásomért, (mert a kést is csak azért hajitottam utánatok, hogymeglássam melyikötök szállna értem szembe a halállal), most hát nekedmegmondom, hogy mitől gyógyulna meg a szemem. Hát kedves fiam,messze-messze a Verestengeren is túl, a hármashegyen is túl lakik egykirály, annak van egy aranytollu madara, ha én annak a madárnak csakegyszer hallhatnám meg a gyönyörű éneklését, mindjárt meggyógyulnéktőle; de nincs annyi kincs, hogy od’adná érte az a király, mert annyiannak az országában az aran</code></pre>
 </div>
 </div>
+<p>Luckily for us, GPT speaks Hungarian! So if we tell it to read the book, it’ll be able to answer all of our English-language questions without a problem. But there’s one problem: the book is <em>not</em> a short tiny paragraph.</p>
 <p>Life would be nice if we could just feed it directly to ChatGPT and start asking questions, but <strong>you can’t make ChatGPT read a whole book</strong>. After it gets partway through the book ChatGPT starts forgetting the earlier pieces!</p>
 <p>There are a few tricks to get around this. We’ll work with one of the simplest for now:</p>
 <ol type="1">
 <li>Split our original text up into pieces</li>
 <li>Find the pieces most relevant to our question</li>
-<li>Send those pieces to ChatGPT along with our question</li>
+<li>Send those pieces to GPT along with our question</li>
 </ol>
 <p>Newer LLMs can deal with a lot more tokens at a time – GPT-4 has both an 8k and 32k version – but hey, we work with what we’ve got.</p>
 </section>
