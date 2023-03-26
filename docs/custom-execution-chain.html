@@ -10,7 +10,7 @@
 <meta name="dcterms.date" content="2023-03-27">
 <meta name="description" content="How to run arbitrary libraries with LangChain to integrate Spotify with GPT, with a nice introduction to APIChain, PALChain and SequentialChain.">
 
-<title>soma stuff - Building Spotify playlists based on vibes using LangChain and GPT</title>
+<title>j soma - Building Spotify playlists based on vibes using LangChain and GPT</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -122,12 +122,12 @@ background: #fff880;
 
 
 <link rel="stylesheet" href="style.css">
-<meta property="og:title" content="soma stuff - Building Spotify playlists based on vibes using LangChain and GPT">
+<meta property="og:title" content="j soma - Building Spotify playlists based on vibes using LangChain and GPT">
 <meta property="og:description" content="How to run arbitrary libraries with LangChain to integrate Spotify with GPT, with a nice introduction to APIChain, PALChain and SequentialChain.">
 <meta property="og:image" content="https://jonathansoma.com/words/assets/where-are-things.png">
-<meta property="og:site-name" content="soma stuff">
+<meta property="og:site-name" content="j soma">
 <meta property="og:locale" content="en_US">
-<meta name="twitter:title" content="soma stuff - Building Spotify playlists based on vibes using LangChain and GPT">
+<meta name="twitter:title" content="j soma - Building Spotify playlists based on vibes using LangChain and GPT">
 <meta name="twitter:description" content="How to run arbitrary libraries with LangChain to integrate Spotify with GPT, with a nice introduction to APIChain, PALChain and SequentialChain.">
 <meta name="twitter:image" content="https://jonathansoma.com/words/assets/where-are-things.png">
 <meta name="twitter:creator" content="@dangerscarf">
@@ -223,14 +223,15 @@ background: #fff880;
 <p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
 <section id="the-universal-need-for-on-demand-vibes-based-spotify-playlists" class="level1">
 <h1>The universal need for on-demand, vibes-based Spotify playlists</h1>
-<p>The top track or two for practically any band on Spotify is a <em>slow one</em>. The Cars have <a href="https://www.youtube.com/watch?v=xuZA6qiJVfU">Drive</a>, Green Day has <a href="https://www.youtube.com/watch?v=Soa3gO7tL-c">Boulevard of Broken Dreams</a>, Blink 182 has <a href="https://www.youtube.com/watch?v=s1tAYmMjLdY">I Miss You</a>. They put me to sleep!</p>
-<p>Instead of screaming at Alexa to “play The Cars” I want to say <strong>“play The Cars <em>but none of those boring slow songs</em>.”</strong></p>
-<p>Spotify’s API includes data for songs like energy level and danceability. If we use <a href="https://langchain.readthedocs.io/">LangChain</a> and GPT, can we finally talk to our best friend Spotify through natural language?</p>
-<p>While LangChain supports APIs, the Spotify API is an awful complex OAuth2 beast that doesn’t fit the existing examples. The <a href="https://spotipy.readthedocs.io/">Spotipy library</a> is a lot easier to use, but as of this moment it isn’t super-simple to run arbitrary code through LangChain.</p>
-<p>But let’s make it happen! In this walkthrough, we’ll look at:</p>
+<p>The top track or two for practically any band on Spotify is a <em>slow one</em>. The Cars have Drive, Green Day has Boulevard of Broken Dreams, Blink 182 has I Miss You. They put me to sleep! Instead of screaming at Alexa to “play The Cars” I want to say “play The Cars <em>but none of those boring slow songs</em>.”</p>
+<p>Spotify actually knows the diference between a slow song and an upbeat one, although somewhat secretly – they don’t reveal it in the app, but their API includes data for songs like energy level and danceability. <strong>Can we combine this information with <a href="https://langchain.readthedocs.io/">LangChain</a> and GPT to talk to Spotify through natural language?</strong></p>
+<p>Trying to get this to work, you hit a wall pretty quickly: while LangChain supports APIs, the Spotify API is an awful complex OAuth2 beast that doesn’t fit the existing examples. The <a href="https://spotipy.readthedocs.io/">Spotipy library</a> is a lot easier to use, but as of this moment it isn’t super-simple to run arbitrary code through LangChain.</p>
+<p><em>But let’s make it happen anyway!</em> In this walkthrough, we’ll look at:</p>
 <ol type="1">
+<li>Accessing Spotify data through the Spotipy Python library</li>
 <li>How LangChain’s <code>APIChain</code> (API access) and <code>PALChain</code> (Python execution) chains are built</li>
-<li>How to take parts of both to allow execution of arbitrary Python tools and summaries of the results</li>
+<li>Combining aspects both to allow LangChain/GPT to use arbitrary Python packages</li>
+<li>Putting it all together to let you, GPT and Spotify and have a little chat about your musical tastes</li>
 </ol>
 <p>If you’re a LangChain pro and are just looking for code to run, you can can skip all these words <a href="https://jonathansoma.com/words/custom-execution-chain.html">and just visit the GitHub repo</a></p>
 <p>If you are a less technical person, just relax while you’re reading the next few sections! They’re the “why” for how we end up tackling our problem.</p>

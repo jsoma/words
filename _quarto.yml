@@ -5,7 +5,7 @@ project:
     - assets/*
 
 website:
-  title: "soma stuff"
+  title: "j soma"
   site-url: https://jonathansoma.com/words/
   open-graph:
     locale: en_US
