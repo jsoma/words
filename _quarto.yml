@@ -12,9 +12,10 @@ website:
     creator: "@dangerscarf"
     image: "https://jonathansoma.com/words/assets/where-are-things.png"
   google-analytics: G-1W7890GDTM
-  
+
 format:
   html:
+    toc-title: Contents
     css: style.css
     theme: cosmo
     title-block: none

@@ -10,7 +10,1856 @@
 <atom:link href="https://jonathansoma.com/words/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.3.272</generator>
-<lastBuildDate>Sat, 18 Mar 2023 04:00:00 GMT</lastBuildDate>
+<lastBuildDate>Mon, 27 Mar 2023 04:00:00 GMT</lastBuildDate>
+<item>
+  <title>Building Spotify playlists based on vibes using LangChain and GPT</title>
+  <dc:creator>Jonathan Soma</dc:creator>
+  <link>https://jonathansoma.com/words/custom-execution-chain.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
+<section id="the-universal-need-for-on-demand-vibes-based-spotify-playlists" class="level1">
+<h1>The universal need for on-demand, vibes-based Spotify playlists</h1>
+<p>The top track or two for practically any band on Spotify is a <em>slow one</em>. The Cars have <a href="https://www.youtube.com/watch?v=xuZA6qiJVfU">Drive</a>, Green Day has <a href="https://www.youtube.com/watch?v=Soa3gO7tL-c">Boulevard of Broken Dreams</a>, Blink 182 has <a href="https://www.youtube.com/watch?v=s1tAYmMjLdY">I Miss You</a>. They put me to sleep!</p>
+<p>Instead of screaming at Alexa to “play The Cars” I want to say <strong>“play The Cars <em>but none of those boring slow songs</em>.”</strong></p>
+<p>Spotify’s API includes data for songs like energy level and danceability. If we use <a href="https://langchain.readthedocs.io/">LangChain</a> and GPT, can we finally talk to our best friend Spotify through natural language?</p>
+<p>While LangChain supports APIs, the Spotify API is an awful complex OAuth2 beast that doesn’t fit the existing examples. The <a href="https://spotipy.readthedocs.io/">Spotipy library</a> is a lot easier to use, but as of this moment it isn’t super-simple to run arbitrary code through LangChain.</p>
+<p>But let’s make it happen! In this walkthrough, we’ll look at:</p>
+<ol type="1">
+<li>How LangChain’s <code>APIChain</code> (API access) and <code>PALChain</code> (Python execution) chains are built</li>
+<li>How to take parts of both to allow execution of arbitrary Python tools and summaries of the results</li>
+</ol>
+<p>If you are a less technical person, <strong>just relax for the next couple sections.</strong> We’re just laying the groundwork for how and why we need to jump through all these hoops.</p>
+</section>
+<section id="the-playlist" class="level1">
+<h1>The Playlist</h1>
+<p>To get the disappointment and/or excitement out of the way early on, here’s the playlist we wind up with at the end:</p>
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/0mg8W9WMMwt8pDU6DVHolz?utm_source=generator" width="100%" height="652" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+</iframe>
+<p>The prompt was “Give me a list of Cars, Blink 182 and Sum 41 songs that are upbeat, loud and fun. Make sure the songs are popular enough for me to have heard of them.”</p>
+<div class="callout callout-style-simple callout-note">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-body-container">
+<p>Speaking of The Rock Show, but there’s nothing better than listening to it while rolling up to the <a href="https://nj.show/">NJ Mineral, Fossil, Gem &amp; Jewelry Show</a>. It’s coming up!!</p>
+</div>
+</div>
+</div>
+</section>
+<section id="preparation-and-setup" class="level1">
+<h1>Preparation and setup</h1>
+<section id="getting-my-api-keys" class="level2">
+<h2 class="anchored" data-anchor-id="getting-my-api-keys">Getting my API keys</h2>
+<p>Both GPT and Spotify require me to prove my identity using <strong>API keys</strong>. If you had my keys you’d be able to impersonate me, talk to my chatbots, and make a bunch of awful playlists – we don’t want <em>any</em> of those happening. Instead of putting the API keys in my notebook, I’m using <a href="https://youtu.be/YdgIWTYQ69A">dotenv-python</a> to keep them nice and secret. I recommend it!</p>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span>load_ext dotenv</span>
+<span id="cb1-2"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span>dotenv</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>The dotenv extension is already loaded. To reload it, use:
+  %reload_ext dotenv</code></pre>
+</div>
+</div>
+</section>
+<section id="accessing-openaigpt" class="level2">
+<h2 class="anchored" data-anchor-id="accessing-openaigpt">Accessing OpenAI/GPT</h2>
+<p>To access GPT-3.5-turbo, we’re use to use a LangChain <a href="https://langchain.readthedocs.io/en/latest/modules/chains/getting_started.html">chain</a>.</p>
+<p>It’s a little more complicated than <a href="./multi-language-qa-gpt.html">when we were talking to fairy tales</a>, but the former method of using a plain <code>OpenAI</code> object is being deprecated in favor of <code>ChatOpenAI</code>.</p>
+<div class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chat_models <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> ChatOpenAI</span>
+<span id="cb3-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.prompts <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PromptTemplate</span>
+<span id="cb3-3"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> LLMChain</span>
+<span id="cb3-4"></span>
+<span id="cb3-5">llm <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ChatOpenAI(model_name<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'gpt-3.5-turbo'</span>)</span></code></pre></div>
+</div>
+<p>Let’s test it out with a sample <code>PromptTemplate</code> about energetic songs.</p>
+<div class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1">prompt <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PromptTemplate(</span>
+<span id="cb4-2">    input_variables<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"artist"</span>],</span>
+<span id="cb4-3">    template<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What are some of the more energetic songs by </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{artist}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">?"</span>,</span>
+<span id="cb4-4">)</span>
+<span id="cb4-5"></span>
+<span id="cb4-6">chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> LLMChain(llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm, prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>prompt)</span></code></pre></div>
+</div>
+<p>Now that it’s assembled, let’s use it.</p>
+<div class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"The Promise Ring"</span>)</span>
+<span id="cb5-2"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(response)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Some of the more energetic songs by The Promise Ring include:
+
+1. "Is This Thing On?"
+2. "Emergency! Emergency!"
+3. "Red &amp; Blue Jeans"
+4. "Happiness is All the Rage"
+5. "Make Me a Chevy"
+6. "Jersey Shore"
+7. "B Is for Bethlehem"
+8. "Why Did We Ever Meet?"
+9. "Stop Playing Guitar"
+10. "Pink Chimneys"</code></pre>
+</div>
+</div>
+<p>Yes, that’s an answer, but <strong>it isn’t good enough</strong>. Asking GPT for energetic songs works, I want to at least <em>pretend</em> that we’re basing this on science! You never know if record labels from the late 90’s are funnelling money to OpenAI to bias the results.</p>
+<p>Luckily, Spotify has that information: their API includes <a href="https://developer.spotify.com/documentation/web-api/reference/#/operations/get-several-audio-features">access a track’s audio features</a> including loudness, danceability and energy! With that in mind, our goal is now to <strong>create a way for GPT and Spotify to interface so that we can leverage that information when building our playlist.</strong></p>
+</section>
+<section id="accessing-spotify" class="level2">
+<h2 class="anchored" data-anchor-id="accessing-spotify">Accessing Spotify</h2>
+<p>We’re going to use <a href="https://spotipy.readthedocs.io/en/2.22.1/">the Spotipy Python library</a> to access Spotify. It handles all of the OAuth login, the refreshing of tokens (they’re only good for 5 minutes!), and everything of that ilk.</p>
+<div class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> os</span>
+<span id="cb7-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> spotipy</span>
+<span id="cb7-3"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> spotipy.oauth2 <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> SpotifyClientCredentials</span>
+<span id="cb7-4"></span>
+<span id="cb7-5">auth <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> SpotifyClientCredentials(</span>
+<span id="cb7-6">    client_id<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>os.environ[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'SPOTIPY_CLIENT_ID'</span>],</span>
+<span id="cb7-7">    client_secret<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>os.environ[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'SPOTIPY_CLIENT_SECRET'</span>]</span>
+<span id="cb7-8">)</span>
+<span id="cb7-9">sp <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> spotipy.Spotify(auth_manager<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>auth)</span></code></pre></div>
+</div>
+<p>If we want songs by the band Wet Leg, we can’t just say “give me Wet Legs top tracks.” Instead, we need to find Wet Leg’s <code>URI</code> - uniform resource indicator, Spotify’s cataloguing ID – and then use <em>that</em> to get the top tracks. It’s important to note that <strong>it’s almost always a multi-step process to get anything useful from Spotify</strong>.</p>
+<p>For example, let’s say we want to filter for energetic songs, which means we want a track’s audio features. If you wanted the audio features for a track but only know the band name, the process looks like what is outlined below:</p>
+<section id="step-one-find-the-artist-uri" class="level3">
+<h3 class="anchored" data-anchor-id="step-one-find-the-artist-uri">Step one: Find the artist URI</h3>
+<p>We’ll use Spotify’s search to try to find the artist Wet Leg, and then assume the first result is the right one.</p>
+<div class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1">response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sp.search(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Wet Leg'</span>, <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">type</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'artist'</span>)</span>
+<span id="cb8-2">uri <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'artists'</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'items'</span>][<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'uri'</span>]</span>
+<span id="cb8-3">uri</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="29">
+<pre><code>'spotify:artist:2TwOrUcYnAlIiKmVQkkoSZ'</code></pre>
+</div>
+</div>
+</section>
+<section id="step-two-find-the-tracks-uris" class="level3">
+<h3 class="anchored" data-anchor-id="step-two-find-the-tracks-uris">Step two: Find the tracks URIs</h3>
+<p>We’ll then use the artist’s URI to find some top tracks from that artist (there’s actually an endpoint for top tracks!).</p>
+<div class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1">response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sp.artist_top_tracks(uri)</span>
+<span id="cb10-2">top_five <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'tracks'</span>][:<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>]</span>
+<span id="cb10-3"></span>
+<span id="cb10-4"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> track <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> top_five:</span>
+<span id="cb10-5">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(track[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'popularity'</span>], track[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'name'</span>], track[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'uri'</span>])</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>70 Wet Dream spotify:track:260Ub1Yuj4CobdISTOBvM9
+66 Chaise Longue spotify:track:0nys6GusuHnjSYLW0PYYb7
+63 Being In Love spotify:track:4VBE0mwU8Nmm8hiqfCe4Ve
+62 Angelica spotify:track:3EwTIu5qka2l5ZekB0b6QC
+60 Ur Mum spotify:track:4ug5wsIcbAPBun8TCKn2t6</code></pre>
+</div>
+</div>
+</section>
+<section id="step-three-find-the-audio-features" class="level3">
+<h3 class="anchored" data-anchor-id="step-three-find-the-audio-features">Step three: Find the audio features</h3>
+<p>Instead of coming with the track results, the danceability and all of those scores are in a completely different endpoint! So we’ll now use the track URIs to access the audio features.</p>
+<div class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> pandas <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> pd</span>
+<span id="cb12-2"></span>
+<span id="cb12-3">uris <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [track[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'uri'</span>] <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> track <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> top_five]</span>
+<span id="cb12-4">audio_features <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sp.audio_features(uris)</span>
+<span id="cb12-5">pd.DataFrame(audio_features)</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="31">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">danceability</th>
+<th data-quarto-table-cell-role="th">energy</th>
+<th data-quarto-table-cell-role="th">key</th>
+<th data-quarto-table-cell-role="th">loudness</th>
+<th data-quarto-table-cell-role="th">mode</th>
+<th data-quarto-table-cell-role="th">speechiness</th>
+<th data-quarto-table-cell-role="th">acousticness</th>
+<th data-quarto-table-cell-role="th">instrumentalness</th>
+<th data-quarto-table-cell-role="th">liveness</th>
+<th data-quarto-table-cell-role="th">valence</th>
+<th data-quarto-table-cell-role="th">tempo</th>
+<th data-quarto-table-cell-role="th">type</th>
+<th data-quarto-table-cell-role="th">id</th>
+<th data-quarto-table-cell-role="th">uri</th>
+<th data-quarto-table-cell-role="th">track_href</th>
+<th data-quarto-table-cell-role="th">analysis_url</th>
+<th data-quarto-table-cell-role="th">duration_ms</th>
+<th data-quarto-table-cell-role="th">time_signature</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>0.721</td>
+<td>0.701</td>
+<td>2</td>
+<td>-5.941</td>
+<td>1</td>
+<td>0.0306</td>
+<td>0.000927</td>
+<td>0.026000</td>
+<td>0.234</td>
+<td>0.892</td>
+<td>130.091</td>
+<td>audio_features</td>
+<td>260Ub1Yuj4CobdISTOBvM9</td>
+<td>spotify:track:260Ub1Yuj4CobdISTOBvM9</td>
+<td>https://api.spotify.com/v1/tracks/260Ub1Yuj4Co...</td>
+<td>https://api.spotify.com/v1/audio-analysis/260U...</td>
+<td>140080</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>0.684</td>
+<td>0.749</td>
+<td>7</td>
+<td>-6.565</td>
+<td>1</td>
+<td>0.0600</td>
+<td>0.001350</td>
+<td>0.111000</td>
+<td>0.141</td>
+<td>0.935</td>
+<td>160.021</td>
+<td>audio_features</td>
+<td>0nys6GusuHnjSYLW0PYYb7</td>
+<td>spotify:track:0nys6GusuHnjSYLW0PYYb7</td>
+<td>https://api.spotify.com/v1/tracks/0nys6GusuHnj...</td>
+<td>https://api.spotify.com/v1/audio-analysis/0nys...</td>
+<td>196905</td>
+<td>4</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>0.716</td>
+<td>0.687</td>
+<td>9</td>
+<td>-4.940</td>
+<td>0</td>
+<td>0.0342</td>
+<td>0.009220</td>
+<td>0.110000</td>
+<td>0.123</td>
+<td>0.342</td>
+<td>126.030</td>
+<td>audio_features</td>
+<td>4VBE0mwU8Nmm8hiqfCe4Ve</td>
+<td>spotify:track:4VBE0mwU8Nmm8hiqfCe4Ve</td>
+<td>https://api.spotify.com/v1/tracks/4VBE0mwU8Nmm...</td>
+<td>https://api.spotify.com/v1/audio-analysis/4VBE...</td>
+<td>122467</td>
+<td>4</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>0.491</td>
+<td>0.870</td>
+<td>0</td>
+<td>-5.138</td>
+<td>1</td>
+<td>0.0393</td>
+<td>0.000141</td>
+<td>0.000729</td>
+<td>0.368</td>
+<td>0.314</td>
+<td>131.989</td>
+<td>audio_features</td>
+<td>3EwTIu5qka2l5ZekB0b6QC</td>
+<td>spotify:track:3EwTIu5qka2l5ZekB0b6QC</td>
+<td>https://api.spotify.com/v1/tracks/3EwTIu5qka2l...</td>
+<td>https://api.spotify.com/v1/audio-analysis/3EwT...</td>
+<td>232320</td>
+<td>4</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>0.685</td>
+<td>0.720</td>
+<td>4</td>
+<td>-5.553</td>
+<td>1</td>
+<td>0.0280</td>
+<td>0.007020</td>
+<td>0.275000</td>
+<td>0.425</td>
+<td>0.554</td>
+<td>133.016</td>
+<td>audio_features</td>
+<td>4ug5wsIcbAPBun8TCKn2t6</td>
+<td>spotify:track:4ug5wsIcbAPBun8TCKn2t6</td>
+<td>https://api.spotify.com/v1/tracks/4ug5wsIcbAPB...</td>
+<td>https://api.spotify.com/v1/audio-analysis/4ug5...</td>
+<td>201253</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>So what I’m saying is: we can’t just hit one endpoint and run away. <strong>This is a lot of work!</strong></p>
+</section>
+</section>
+</section>
+<section id="existing-chains" class="level1">
+<h1>Existing chains</h1>
+<p>When attempting to talk to the Spotify API through Spotipy, there are two obvious answers from the LangChain documentation that might come to mind:</p>
+<ul>
+<li><code>APIChain</code>, which is used for talking to APIs</li>
+<li><code>PALChain</code>, which is used for running Python code</li>
+</ul>
+<p>Now we’ll look at the shortcomings of each and why we need to create our own custom chain.</p>
+<section id="how-the-apichain-works" class="level2">
+<h2 class="anchored" data-anchor-id="how-the-apichain-works">How the APIChain works</h2>
+<p>An APIChain can be used to access an API! This is a slightly adapted version of the <a href="https://langchain.readthedocs.io/en/latest/modules/chains/examples/api.html">APIChain example from the docs</a>.</p>
+<div class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chains <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> APIChain</span>
+<span id="cb13-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chains.api <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> open_meteo_docs</span>
+<span id="cb13-3"></span>
+<span id="cb13-4">chain_new <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> APIChain.from_llm_and_api_docs(llm, open_meteo_docs.OPEN_METEO_DOCS, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span>
+<span id="cb13-5">chain_new.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'What is the weather like right now in Munich, Germany in degrees Farenheit? Do not include a forecast.'</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://api.open-meteo.com/v1/forecast?latitude=48.137154&amp;longitude=11.576124&amp;current_weather=true&amp;temperature_unit=fahrenheit
+{"latitude":48.14,"longitude":11.58,"generationtime_ms":0.1989603042602539,"utc_offset_seconds":0,"timezone":"GMT","timezone_abbreviation":"GMT","elevation":526.0,"current_weather":{"temperature":50.0,"windspeed":16.1,"winddirection":254.0,"weathercode":3,"time":"2023-03-26T16:00"}}
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="32">
+<pre><code>'The weather in Munich, Germany right now is 50 degrees Fahrenheit.'</code></pre>
+</div>
+</div>
+<p>An important thing to take note of here is <code>open_meteo_docs.OPEN_METEO_DOCS</code>: along with our prompt and an llm, we’re also sending the documentation for the Open-Meteo API. It looks like this:</p>
+<div class="cell" data-execution_count="40">
+<div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(open_meteo_docs.OPEN_METEO_DOCS[:<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1000</span>])</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>BASE URL: https://api.open-meteo.com/
+
+API Documentation
+The API endpoint /v1/forecast accepts a geographical coordinate, a list of weather variables and responds with a JSON hourly weather forecast for 7 days. Time always starts at 0:00 today and contains 168 hours. All URL parameters are listed below:
+
+Parameter   Format  Required    Default Description
+latitude, longitude Floating point  Yes     Geographical WGS84 coordinate of the location
+hourly  String array    No      A list of weather variables which should be returned. Values can be comma separated, or multiple &amp;hourly= parameter in the URL can be used.
+daily   String array    No      A list of daily weather variable aggregations which should be returned. Values can be comma separated, or multiple &amp;daily= parameter in the URL can be used. If daily weather variables are specified, parameter timezone is required.
+current_weather Bool    No  false   Include current weather conditions in the JSON output.
+temperature_unit    String  No  celsius If fahrenheit is set, al</code></pre>
+</div>
+</div>
+<p>But what is the chain doing with the Open-Meteo docs? If we <a href="https://github.com/hwchase17/langchain/blob/master/langchain/chains/api/base.py">dig around in the source code</a> we can find a few lines of code that get into the details:</p>
+<div class="sourceCode" id="cb18" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1">get_request_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> LLMChain(llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm, prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>api_url_prompt)</span>
+<span id="cb18-2">requests_wrapper <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> RequestsWrapper(headers<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>headers)</span>
+<span id="cb18-3">get_answer_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> LLMChain(llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm, prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>api_response_prompt)</span></code></pre></div>
+<p>These are used in a three-step process:</p>
+<ol type="1">
+<li>Get the API URL</li>
+<li>Use the API URL to get the data</li>
+<li>Process the data into an answer to the question</li>
+</ol>
+<p><strong>The first step</strong> builds an <code>LLMChain</code> to talk to GPT. LangChain then provides the API documentation to GPT, and asks it to determine the API endpoint to visit.</p>
+<div class="sourceCode" id="cb19" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">"""You are given the below API Documentation:</span></span>
+<span id="cb19-2"></span>
+<span id="cb19-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">    {api_docs}</span></span>
+<span id="cb19-4"></span>
+<span id="cb19-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">Using this documentation, generate the full API url to call for answering the user question.</span></span>
+<span id="cb19-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">You should build the API url in order to get a response that is as short as possible, while still getting the necessary information to answer the question. Pay attention to deliberately exclude any unnecessary pieces of data in the API call.</span></span>
+<span id="cb19-7"></span>
+<span id="cb19-8"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">Question:{question}</span></span>
+<span id="cb19-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">API url:"""</span></span></code></pre></div>
+<p><strong>The second step</strong> builds a <code>RequestsWrapper</code> to access the API URL and returns the response. But it isn’t a human-readable response to our question yet, it’s almost always going to be a bunch of JSON.</p>
+<p><strong>The final step</strong> uses another <code>LLMChain</code> to talk to GPT again: LangChain sends the API response to GPT and asks for a human-readable summary to answer the question.</p>
+<div class="sourceCode" id="cb20" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">"""Here is the response from the API:</span></span>
+<span id="cb20-2"></span>
+<span id="cb20-3"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{api_response}</span></span>
+<span id="cb20-4"></span>
+<span id="cb20-5"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">Summarize this response to answer the original question.</span></span>
+<span id="cb20-6"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">Summary:"""</span></span></code></pre></div>
+<section id="why-this-doesnt-work-for-our-spotify-use-case" class="level3">
+<h3 class="anchored" data-anchor-id="why-this-doesnt-work-for-our-spotify-use-case">Why this doesn’t work for our Spotify use case</h3>
+<p>Even though we want to talk to an API, <strong>we want to talk to an API through the Spotipy Python library, not a series of URLs</strong>. Since the <code>APIChain</code> is based around making an actual request to somewhere on the internet, this isn’t going to work for us.</p>
+<p>If the Spotify API were a nice simple REST API we could just feed <code>APIChain</code> the documentation, but that isn’t the case.</p>
+</section>
+</section>
+<section id="how-the-palchain-works" class="level2">
+<h2 class="anchored" data-anchor-id="how-the-palchain-works">How the PALChain works</h2>
+<p>A PALChain can be used to create and run arbitrary Python code! This is <a href="https://langchain.readthedocs.io/en/latest/modules/chains/examples/pal.html">the PALChain example from the docs</a>.</p>
+<div class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb21" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chains <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PALChain</span>
+<span id="cb21-2"></span>
+<span id="cb21-3">pal_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PALChain.from_math_prompt(llm, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span>
+<span id="cb21-4">question <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Jan has three times the number of pets as Marcia. Marcia has two more pets than Cindy. If Cindy has four pets, how many total pets do the three have?"</span></span>
+<span id="cb21-5">pal_chain.run(question)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new PALChain chain...
+def solution():
+    """Jan has three times the number of pets as Marcia. Marcia has two more pets than Cindy. If Cindy has four pets, how many total pets do the three have?"""
+    cindy_pets = 4
+    marcia_pets = cindy_pets + 2
+    jan_pets = marcia_pets * 3
+    total_pets = cindy_pets + marcia_pets + jan_pets
+    result = total_pets
+    return result
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="16">
+<pre><code>'28'</code></pre>
+</div>
+</div>
+<p>If we look at <a href="https://github.com/hwchase17/langchain/blob/master/langchain/chains/pal/math_prompt.py">the code for the math chain’s prompt</a> it’s <em>very</em> long. Here’s a portion of it:</p>
+<div class="sourceCode" id="cb24" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.prompts.prompt <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PromptTemplate</span>
+<span id="cb24-2"></span>
+<span id="cb24-3">template <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (</span>
+<span id="cb24-4">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'''</span></span>
+<span id="cb24-5"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?</span></span>
+<span id="cb24-6"></span>
+<span id="cb24-7"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb24-8"></span>
+<span id="cb24-9"></span>
+<span id="cb24-10"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb24-11"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """Olivia has $23. She bought five bagels for $3 each. How much money does she have left?"""</span></span>
+<span id="cb24-12"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    money_initial = 23</span></span>
+<span id="cb24-13"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    bagels = 5</span></span>
+<span id="cb24-14"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    bagel_cost = 3</span></span>
+<span id="cb24-15"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    money_spent = bagels * bagel_cost</span></span>
+<span id="cb24-16"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    money_left = money_initial - money_spent</span></span>
+<span id="cb24-17"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    result = money_left</span></span>
+<span id="cb24-18"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return result</span></span>
+<span id="cb24-19"></span>
+<span id="cb24-20"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?</span></span>
+<span id="cb24-21"></span>
+<span id="cb24-22"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb24-23"></span>
+<span id="cb24-24"></span>
+<span id="cb24-25"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb24-26"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?"""</span></span>
+<span id="cb24-27"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    trees_initial = 15</span></span>
+<span id="cb24-28"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    trees_after = 21</span></span>
+<span id="cb24-29"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    trees_added = trees_after - trees_initial</span></span>
+<span id="cb24-30"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    result = trees_added</span></span>
+<span id="cb24-31"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return result</span></span>
+<span id="cb24-32"></span>
+<span id="cb24-33"></span>
+<span id="cb24-34"></span>
+<span id="cb24-35"></span>
+<span id="cb24-36"></span>
+<span id="cb24-37"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{question}</span></span>
+<span id="cb24-38"></span>
+<span id="cb24-39"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb24-40"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'''</span>.strip()</span>
+<span id="cb24-41">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n\n\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb24-42">)</span>
+<span id="cb24-43">MATH_PROMPT <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PromptTemplate(input_variables<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"question"</span>], template<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>template)</span></code></pre></div>
+<p>That prompt only gives you Python code, though, not the actual result! To see what happens with the result we need to <a href="https://github.com/hwchase17/langchain/blob/master/langchain/chains/pal/base.py#L57-L68">check the PALChain code itself</a>, lightly edited for clarity:</p>
+<div class="sourceCode" id="cb25" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">def</span> _call(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>, inputs: Dict[<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">str</span>, <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">str</span>]) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> Dict[<span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">str</span>, <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">str</span>]:</span>
+<span id="cb25-2">    llm_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> LLMChain(llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.llm, prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.prompt)</span>
+<span id="cb25-3">    code <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> llm_chain.predict(stop<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.stop], <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">**</span>inputs)</span>
+<span id="cb25-4">    repl <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PythonREPL(_globals<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.python_globals, _locals<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.python_locals)</span>
+<span id="cb25-5">    res <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> repl.run(code <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>get_answer_expr<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb25-6">    output <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> {<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.output_key: res.strip()}</span>
+<span id="cb25-7">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">return</span> output</span></code></pre></div>
+<p>The code looks a little wild, but the process is pretty simple:</p>
+<ol type="1">
+<li>Use the LLM and the prompt to generate some code</li>
+<li>Create a Python REPL to run the generated code, sending along some global and local variables</li>
+<li>Run the code contained in <code>self.get_answer_expr</code> to get the result of the solution.</li>
+</ol>
+<p>In this case, the <code>get_answer_expr</code> is <a href="https://github.com/hwchase17/langchain/blob/master/langchain/chains/pal/base.py#L77"><code>print(solution())</code></a>. Our prompt insists the answer be put in a function called <code>solution</code>, so this is how we call the function and obtain the result.</p>
+<section id="why-this-doesnt-work-for-our-spotify-use-case-1" class="level3">
+<h3 class="anchored" data-anchor-id="why-this-doesnt-work-for-our-spotify-use-case-1">Why this doesn’t work for our Spotify use case</h3>
+<p>With a little work, we actually <em>can</em> make it work! It just needs a little extra effort and inspiration from <code>APIChain</code>.</p>
+</section>
+</section>
+</section>
+<section id="our-process" class="level1">
+<h1>Our process</h1>
+<p>Our process is going to take two steps:</p>
+<ol type="1">
+<li>Use a <code>PALChain</code> to write and run the Spotipy code</li>
+<li>Use an <code>LLMChain</code>to clean it up and provide an answer</li>
+</ol>
+<p>The separte steps of “data acquisition first, then clean up for the presentation” is inspired by our friend <code>APIChain</code>. In theory we might even be able to split this into three steps – develop the code, run the code, analyze the results – but let’s keep it to two for now.</p>
+<section id="the-spotipy-code-prompt" class="level2">
+<h2 class="anchored" data-anchor-id="the-spotipy-code-prompt">The Spotipy code prompt</h2>
+<p>How do we get GPT to write Spotipy code for us? It’s similar to the API example – giving the documentation to GPT along with our question – but in this case we wouldn’t use Spotify’s API documentation, we’d use documentation for the Spotipy library.</p>
+<p>While we could try feeding GPT <a href="https://spotipy.readthedocs.io/en/2.22.1/">the entire documentation page for Spotipy</a>, it’s too long to do it all at once. We <em>could</em> chunk it and feed it into a reference database that is selectively queried for <a href="./multi-language-qa-gpt.html">relevant content</a>… but that’s just too much work. We want something simple.</p>
+<p>Instead, we’re going to go the lazy route: <strong>the Spotify library has been around for <em>ages</em> and GPT already knows how it works, so we’ll just rely on its in-built knowledge.</strong> We just need to provide a few examples of how we like to work with the library and what we need returned, and GPT will follow our lead.</p>
+<p>Here’s our prompt for generating Spotipy code to access the Spotify API:</p>
+<div class="cell" data-execution_count="33">
+<div class="sourceCode cell-code" id="cb26" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.prompts.prompt <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PromptTemplate</span>
+<span id="cb26-2"></span>
+<span id="cb26-3"></span>
+<span id="cb26-4">SPOTIPY_PROMPT_TEMPLATE <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (</span>
+<span id="cb26-5">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'''</span></span>
+<span id="cb26-6"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">API LIMITATIONS TO NOTE</span></span>
+<span id="cb26-7"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">* When requesting track information, the limit is 50 at a time</span></span>
+<span id="cb26-8"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">* When requesting audio features, the limit is 100 at a time</span></span>
+<span id="cb26-9"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">* When selecting multiple artists, the limit is 50 at a time</span></span>
+<span id="cb26-10"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">* When asking for recommendations, the limit is 100 at a time</span></span>
+<span id="cb26-11"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">=====</span></span>
+<span id="cb26-12"></span>
+<span id="cb26-13"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: What albums has the band Green Day made?</span></span>
+<span id="cb26-14"></span>
+<span id="cb26-15"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-16"></span>
+<span id="cb26-17"></span>
+<span id="cb26-18"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb26-19"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """What albums has the band Green Day made?"""</span></span>
+<span id="cb26-20"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    search_results = sp.search(q='Green Day', type='artist')</span></span>
+<span id="cb26-21"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    uri = search_results['artists']['items'][0]['uri']</span></span>
+<span id="cb26-22"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    albums = sp.artist_albums(green_day_uri, album_type='album')</span></span>
+<span id="cb26-23"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return albums</span></span>
+<span id="cb26-24"></span>
+<span id="cb26-25"></span>
+<span id="cb26-26"></span>
+<span id="cb26-27"></span>
+<span id="cb26-28"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: Who are some musicians similar to Fiona Apple?</span></span>
+<span id="cb26-29"></span>
+<span id="cb26-30"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-31"></span>
+<span id="cb26-32"></span>
+<span id="cb26-33"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb26-34"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """Who are some musicians similar to Fiona Apple?"""</span></span>
+<span id="cb26-35"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    search_results = sp.search(q='Fiona Apple', type='artist')</span></span>
+<span id="cb26-36"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    uri = search_results['artists']['items'][0].get('uri')</span></span>
+<span id="cb26-37"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    artists = sp.artist_related_artists(uri)</span></span>
+<span id="cb26-38"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return artists</span></span>
+<span id="cb26-39"></span>
+<span id="cb26-40"></span>
+<span id="cb26-41"></span>
+<span id="cb26-42"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: Tell me what songs by The Promise Ring sound like</span></span>
+<span id="cb26-43"></span>
+<span id="cb26-44"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-45"></span>
+<span id="cb26-46"></span>
+<span id="cb26-47"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb26-48"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """Tell me what songs by The Promise Ring sound like?"""</span></span>
+<span id="cb26-49"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    search_results = sp.search(q='The Promise Ring', type='artist')</span></span>
+<span id="cb26-50"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    uri = search_results['artists']['items'][0].get('uri')</span></span>
+<span id="cb26-51"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    tracks = sp.artist_top_tracks(uri)</span></span>
+<span id="cb26-52"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    track_uris = [track.get('uri') for track in tracks['tracks']]</span></span>
+<span id="cb26-53"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    audio_details = sp.audio_features(track_uris)</span></span>
+<span id="cb26-54"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return audio_details</span></span>
+<span id="cb26-55"></span>
+<span id="cb26-56"></span>
+<span id="cb26-57"></span>
+<span id="cb26-58"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: Get me the URI for the album The Colour And The Shape</span></span>
+<span id="cb26-59"></span>
+<span id="cb26-60"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-61"></span>
+<span id="cb26-62"></span>
+<span id="cb26-63"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb26-64"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """Get me the URI for the album The Colour And The Shape"""</span></span>
+<span id="cb26-65"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    search_results = sp.search(q='The Colour And The Shape', type='album')</span></span>
+<span id="cb26-66"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    uri = search_results['albums']['items'][0].get('uri')</span></span>
+<span id="cb26-67"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return uri</span></span>
+<span id="cb26-68"></span>
+<span id="cb26-69"></span>
+<span id="cb26-70"></span>
+<span id="cb26-71"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: What are the first three songs on Diet Cig's Over Easy?</span></span>
+<span id="cb26-72"></span>
+<span id="cb26-73"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-74"></span>
+<span id="cb26-75"></span>
+<span id="cb26-76"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb26-77"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """What are the first three songs on Diet Cig's Over Easy?"""</span></span>
+<span id="cb26-78"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    # Get the URI for the album</span></span>
+<span id="cb26-79"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    search_results = sp.search(q='Diet Cig Over Easy', type='album')</span></span>
+<span id="cb26-80"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    album = search_results['albums']['items'][0]</span></span>
+<span id="cb26-81"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    album_uri = album['uri']</span></span>
+<span id="cb26-82"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    # Get the album tracks</span></span>
+<span id="cb26-83"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    album_tracks = sp.album_tracks(album_uri)['items']</span></span>
+<span id="cb26-84"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    # Sort the tracks by duration</span></span>
+<span id="cb26-85"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    first_three = album_tracks[:3]</span></span>
+<span id="cb26-86"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    tracks = []</span></span>
+<span id="cb26-87"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    # Only include relevant fields</span></span>
+<span id="cb26-88"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    for i, track in enumerate(first_three):</span></span>
+<span id="cb26-89"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        # track['album'] does NOT work with sp.album_tracks</span></span>
+<span id="cb26-90"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        # you need to use album['name'] instead</span></span>
+<span id="cb26-91"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        tracks.append(</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{{</span></span>
+<span id="cb26-92"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            'position': i+1,</span></span>
+<span id="cb26-93"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            'song_name': track.get('name'),</span></span>
+<span id="cb26-94"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            'song_uri': track['artists'][0].get('uri'),</span></span>
+<span id="cb26-95"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            'artist_uri': track['artists'][0].get('uri'),</span></span>
+<span id="cb26-96"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            'album_uri': album.get('uri'),</span></span>
+<span id="cb26-97"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            'album_name': album.get('name')</span></span>
+<span id="cb26-98"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">)</span></span>
+<span id="cb26-99"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return tracks</span></span>
+<span id="cb26-100"></span>
+<span id="cb26-101"></span>
+<span id="cb26-102"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: What are the thirty most danceable songs by Metallica?</span></span>
+<span id="cb26-103"></span>
+<span id="cb26-104"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-105"></span>
+<span id="cb26-106"></span>
+<span id="cb26-107"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">def solution():</span></span>
+<span id="cb26-108"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    """What are most danceable songs by Metallica?"""</span></span>
+<span id="cb26-109"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    search_results = sp.search(q='Metallica', type='artist')</span></span>
+<span id="cb26-110"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    uri = search_results['artists']['items'][0]['uri']</span></span>
+<span id="cb26-111"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    albums = sp.artist_albums(uri, album_type='album')</span></span>
+<span id="cb26-112"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    album_uris = [album['uri'] for album in albums['items']]</span></span>
+<span id="cb26-113"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    tracks = []</span></span>
+<span id="cb26-114"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    for album_uri in album_uris:</span></span>
+<span id="cb26-115"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        album_tracks = sp.album_tracks(album_uri)</span></span>
+<span id="cb26-116"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        tracks.extend(album_tracks['items'])</span></span>
+<span id="cb26-117"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    track_uris = [track['uri'] for track in tracks]</span></span>
+<span id="cb26-118"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    danceable_tracks = []</span></span>
+<span id="cb26-119"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    # You can only have 100 at a time</span></span>
+<span id="cb26-120"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    for i in range(0, len(track_uris), 100):</span></span>
+<span id="cb26-121"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        subset_track_uris = track_uris[i:i+100]</span></span>
+<span id="cb26-122"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        audio_details = sp.audio_features(subset_track_uris)</span></span>
+<span id="cb26-123"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">        for j, details in enumerate(audio_details):</span></span>
+<span id="cb26-124"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">            if details['danceability'] &gt; 0.7:</span></span>
+<span id="cb26-125"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                track = tracks[i+j]</span></span>
+<span id="cb26-126"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                danceable_tracks.append(</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{{</span></span>
+<span id="cb26-127"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                    'song': track.get('name')</span></span>
+<span id="cb26-128"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                    'album': track.get('album').get('name')</span></span>
+<span id="cb26-129"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                    'danceability': details.get('danceability'),</span></span>
+<span id="cb26-130"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                    'tempo': details.get('tempo'),</span></span>
+<span id="cb26-131"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">)</span></span>
+<span id="cb26-132"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                # Be sure to add the audio details to the track</span></span>
+<span id="cb26-133"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">                danceable_tracks.append(track)</span></span>
+<span id="cb26-134"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">    return danceable_tracks</span></span>
+<span id="cb26-135"></span>
+<span id="cb26-136"></span>
+<span id="cb26-137"></span>
+<span id="cb26-138"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Q: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{question}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">. Return a list or dictionary, only including the fields necessary to answer the question, including relevant scores and the uris to the albums/songs/artists mentioned. Only return the data – if the prompt asks for a format such as markdown or a simple string, ignore it: you are only meant to provide the information, not the formatting. A later step in the process will convert the data into the new format (table, sentence, etc).</span></span>
+<span id="cb26-139"></span>
+<span id="cb26-140"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;"># solution in Python:</span></span>
+<span id="cb26-141"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'''</span>.strip()</span>
+<span id="cb26-142">    <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n\n\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb26-143">)</span>
+<span id="cb26-144"></span>
+<span id="cb26-145">SPOTIPY_PROMPT <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PromptTemplate(input_variables<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"question"</span>], template<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>SPOTIPY_PROMPT_TEMPLATE)</span></code></pre></div>
+</div>
+</section>
+<section id="palchain-for-data-access" class="level2">
+<h2 class="anchored" data-anchor-id="palchain-for-data-access">PALChain for data access</h2>
+<p>The PALChain example from the docs <a href="https://python.langchain.com/en/latest/modules/chains/examples/pal.html">makes it look so simple</a>:</p>
+<div class="sourceCode" id="cb27" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1">pal_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PALChain.from_math_prompt(llm, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span>
+<span id="cb27-2">question <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Jan has three times the number of pets as Marcia. Marcia has two more pets than Cindy. If Cindy has four pets, how many total pets do the three have?"</span></span>
+<span id="cb27-3">pal_chain.run(question)</span></code></pre></div>
+<p>But a lot of work is happening behind the scenes! In our case, we’re going to be building a PALChain from scratch instead of relying on a constructor.</p>
+<p>There are a couple important additions we make as we initialize the PALChain. First, we need to provide our initialized and authenticated Spotipy <code>sp</code> instance so the PythonREPL can access Spotipy. We’ll do this using <code>python_globals=</code>.</p>
+<div class="sourceCode" id="cb28" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1">python_globals<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>{</span>
+<span id="cb28-2">    <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sp'</span>: sp</span>
+<span id="cb28-3">},</span></code></pre></div>
+<p>The next step is wrangling our data. Results from chains come as strings, but the Spotify API returns JSON (or more specifically, a Python dictionary). To nicely convert our dictionary into a string we’ll be using <code>json.dumps</code>. The <code>json</code> module isn’t included by default, so this requires importing hte json library before we do the conversion.</p>
+<p>Both of these steps are squished into the <code>get_answer_expr</code> parameter. It’s a bit garish but it works!</p>
+<div class="sourceCode" id="cb29" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1">get_answer_expr<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"import json; print(json.dumps(solution()))"</span>,</span></code></pre></div>
+<p>Finally, we’re also adding <code>return_intermediate_steps=True</code> to make sure it returns the result of the code running <em>and</em> the code it ran.</p>
+<p>This is what it looks like all put together:</p>
+<div class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb30" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chains <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PALChain</span>
+<span id="cb30-2"></span>
+<span id="cb30-3">spotify_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PALChain(</span>
+<span id="cb30-4">    llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm,</span>
+<span id="cb30-5">    prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>SPOTIPY_PROMPT,</span>
+<span id="cb30-6">    python_globals<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>{</span>
+<span id="cb30-7">        <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'sp'</span>: sp</span>
+<span id="cb30-8">    },</span>
+<span id="cb30-9">    stop<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n\n\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'</span>,</span>
+<span id="cb30-10">    verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>,</span>
+<span id="cb30-11">    return_intermediate_steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>,</span>
+<span id="cb30-12">    get_answer_expr<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"import json; print(json.dumps(solution()))"</span>,</span>
+<span id="cb30-13">)</span></code></pre></div>
+</div>
+<p>It’s complicated enough, but does it work?</p>
+<div class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb31" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1">spotify_response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> spotify_chain({<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'question'</span>: <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What are the most popular Bouncing Souls songs?"</span>})</span>
+<span id="cb31-2">spotify_response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'result'</span>]</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new PALChain chain...
+def solution():
+    """What are the most popular Bouncing Souls songs?"""
+    search_results = sp.search(q='Bouncing Souls', type='artist')
+    uri = search_results['artists']['items'][0].get('uri')
+    top_tracks = sp.artist_top_tracks(uri)
+    top_track_uris = [track.get('uri') for track in top_tracks['tracks']]
+    audio_details = sp.audio_features(top_track_uris)
+    popular_songs = []
+    for i, track in enumerate(top_tracks['tracks']):
+        details = audio_details[i]
+        popular_songs.append({
+            'song_name': track.get('name'),
+            'song_uri': track.get('uri'),
+            'artist_name': track.get('artists')[0].get('name'),
+            'artist_uri': track.get('artists')[0].get('uri'),
+            'album_name': track.get('album').get('name'),
+            'album_uri': track.get('album').get('uri'),
+            'popularity': track.get('popularity'),
+            'danceability': details.get('danceability'),
+            'energy': details.get('energy'),
+            'key': details.get('key'),
+            'loudness': details.get('loudness'),
+            'mode': details.get('mode'),
+            'speechiness': details.get('speechiness'),
+            'acousticness': details.get('acousticness'),
+            'instrumentalness': details.get('instrumentalness'),
+            'liveness': details.get('liveness'),
+            'valence': details.get('valence'),
+            'tempo': details.get('tempo'),
+        })
+    return popular_songs[:10] # Return top 10 songs
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="35">
+<pre><code>'[{"song_name": "True Believers", "song_uri": "spotify:track:4fRmFVMd0c1SGfzazBJIM8", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "How I Spent My Summer Vacation", "album_uri": "spotify:album:64zbLX1ze8N3kcAMX0qq7G", "popularity": 55, "danceability": 0.237, "energy": 0.981, "key": 0, "loudness": -4.32, "mode": 1, "speechiness": 0.0989, "acousticness": 0.000296, "instrumentalness": 3.81e-05, "liveness": 0.202, "valence": 0.475, "tempo": 98.181}, {"song_name": "Lean On Sheena", "song_uri": "spotify:track:7IR7GUO0dUyUsBp7BfQ3vJ", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "The Gold Record", "album_uri": "spotify:album:3MF7PvmrMjEXGvA8fP3L6l", "popularity": 51, "danceability": 0.491, "energy": 0.866, "key": 11, "loudness": -4.431, "mode": 1, "speechiness": 0.0583, "acousticness": 0.16, "instrumentalness": 0.000211, "liveness": 0.13, "valence": 0.694, "tempo": 175.969}, {"song_name": "Hopeless Romantic", "song_uri": "spotify:track:180mXjN61yhrKhbY2yQc0E", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Hopeless Romantic", "album_uri": "spotify:album:56CbFyDsG65LI1Eoh7hsOT", "popularity": 49, "danceability": 0.243, "energy": 0.981, "key": 4, "loudness": -5.251, "mode": 1, "speechiness": 0.074, "acousticness": 0.000164, "instrumentalness": 1.11e-05, "liveness": 0.207, "valence": 0.216, "tempo": 105.022}, {"song_name": "Manthem", "song_uri": "spotify:track:5pSjxUAwOol5e0TWp1ecHC", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "How I Spent My Summer Vacation", "album_uri": "spotify:album:64zbLX1ze8N3kcAMX0qq7G", "popularity": 46, "danceability": 0.524, "energy": 0.986, "key": 2, "loudness": -2.865, "mode": 1, "speechiness": 0.0634, "acousticness": 9.44e-05, "instrumentalness": 0.000214, "liveness": 0.0772, "valence": 0.724, "tempo": 94.348}, {"song_name": "Sing Along Forever", "song_uri": "spotify:track:5feYKXxg4HL2APTQGCfAav", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Anchors Aweigh", "album_uri": "spotify:album:1xgfRXjCoynPLqtdNu50pR", "popularity": 46, "danceability": 0.592, "energy": 0.964, "key": 0, "loudness": -3.672, "mode": 1, "speechiness": 0.0817, "acousticness": 0.00912, "instrumentalness": 0, "liveness": 0.27, "valence": 0.585, "tempo": 101.252}, {"song_name": "Say Anything", "song_uri": "spotify:track:06peZfvxR5721oGqHwogha", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "The Bouncing Souls", "album_uri": "spotify:album:7LgICzKkhaLV9Gttn8xM7a", "popularity": 45, "danceability": 0.448, "energy": 0.995, "key": 6, "loudness": -3.111, "mode": 1, "speechiness": 0.0539, "acousticness": 0.00275, "instrumentalness": 0, "liveness": 0.297, "valence": 0.643, "tempo": 101.405}, {"song_name": "Ole", "song_uri": "spotify:track:2McQQA5nCLVL0XvzcxWhFC", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Hopeless Romantic", "album_uri": "spotify:album:56CbFyDsG65LI1Eoh7hsOT", "popularity": 43, "danceability": 0.33, "energy": 0.833, "key": 7, "loudness": -6.507, "mode": 1, "speechiness": 0.0768, "acousticness": 0.0491, "instrumentalness": 0, "liveness": 0.687, "valence": 0.553, "tempo": 128.329}, {"song_name": "Ten Stories High", "song_uri": "spotify:track:1t9Y1HGwikUCCo5xCupAnT", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Ten Stories High", "album_uri": "spotify:album:0wdbr46ndnwB1cgZoNzT48", "popularity": 30, "danceability": 0.361, "energy": 0.984, "key": 5, "loudness": -1.913, "mode": 1, "speechiness": 0.0883, "acousticness": 0.000322, "instrumentalness": 0.000873, "liveness": 0.329, "valence": 0.491, "tempo": 198.064}, {"song_name": "Kids and Heroes", "song_uri": "spotify:track:7ru4QA7k7ViuLS9oDtdRBI", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Anchors Aweigh", "album_uri": "spotify:album:1xgfRXjCoynPLqtdNu50pR", "popularity": 43, "danceability": 0.405, "energy": 0.963, "key": 0, "loudness": -5.216, "mode": 1, "speechiness": 0.0697, "acousticness": 0.0127, "instrumentalness": 0.000256, "liveness": 0.289, "valence": 0.198, "tempo": 101.759}, {"song_name": "Kate Is Great", "song_uri": "spotify:track:1VT2wLreLu0l7E4T0JDedh", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "The Bouncing Souls", "album_uri": "spotify:album:7LgICzKkhaLV9Gttn8xM7a", "popularity": 42, "danceability": 0.358, "energy": 0.93, "key": 2, "loudness": -4.726, "mode": 1, "speechiness": 0.164, "acousticness": 0.0822, "instrumentalness": 0, "liveness": 0.0699, "valence": 0.809, "tempo": 175.011}]'</code></pre>
+</div>
+</div>
+<p>Let’s look at the three separate keys the <code>PALChain</code> response gives us.</p>
+<p>First, the <strong>question</strong>:</p>
+<div class="cell" data-execution_count="36">
+<div class="sourceCode cell-code" id="cb34" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1">spotify_response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'question'</span>]</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="36">
+<pre><code>'What are the most popular Bouncing Souls songs?'</code></pre>
+</div>
+</div>
+<p>Second, the <strong>intermediate steps</strong> (the code that it ran):</p>
+<div class="cell" data-execution_count="37">
+<div class="sourceCode cell-code" id="cb36" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(spotify_response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'intermediate_steps'</span>])</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>def solution():
+    """What are the most popular Bouncing Souls songs?"""
+    search_results = sp.search(q='Bouncing Souls', type='artist')
+    uri = search_results['artists']['items'][0].get('uri')
+    top_tracks = sp.artist_top_tracks(uri)
+    top_track_uris = [track.get('uri') for track in top_tracks['tracks']]
+    audio_details = sp.audio_features(top_track_uris)
+    popular_songs = []
+    for i, track in enumerate(top_tracks['tracks']):
+        details = audio_details[i]
+        popular_songs.append({
+            'song_name': track.get('name'),
+            'song_uri': track.get('uri'),
+            'artist_name': track.get('artists')[0].get('name'),
+            'artist_uri': track.get('artists')[0].get('uri'),
+            'album_name': track.get('album').get('name'),
+            'album_uri': track.get('album').get('uri'),
+            'popularity': track.get('popularity'),
+            'danceability': details.get('danceability'),
+            'energy': details.get('energy'),
+            'key': details.get('key'),
+            'loudness': details.get('loudness'),
+            'mode': details.get('mode'),
+            'speechiness': details.get('speechiness'),
+            'acousticness': details.get('acousticness'),
+            'instrumentalness': details.get('instrumentalness'),
+            'liveness': details.get('liveness'),
+            'valence': details.get('valence'),
+            'tempo': details.get('tempo'),
+        })
+    return popular_songs[:10] # Return top 10 songs</code></pre>
+</div>
+</div>
+<p>Finally, the <strong>actual response</strong>. In the <code>PALChain</code> examples it’s mostly the result of a quick calculation, but this time it’s a whole big mess of JSON:</p>
+<div class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb38" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1">spotify_response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'result'</span>]</span></code></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="38">
+<pre><code>'[{"song_name": "True Believers", "song_uri": "spotify:track:4fRmFVMd0c1SGfzazBJIM8", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "How I Spent My Summer Vacation", "album_uri": "spotify:album:64zbLX1ze8N3kcAMX0qq7G", "popularity": 55, "danceability": 0.237, "energy": 0.981, "key": 0, "loudness": -4.32, "mode": 1, "speechiness": 0.0989, "acousticness": 0.000296, "instrumentalness": 3.81e-05, "liveness": 0.202, "valence": 0.475, "tempo": 98.181}, {"song_name": "Lean On Sheena", "song_uri": "spotify:track:7IR7GUO0dUyUsBp7BfQ3vJ", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "The Gold Record", "album_uri": "spotify:album:3MF7PvmrMjEXGvA8fP3L6l", "popularity": 51, "danceability": 0.491, "energy": 0.866, "key": 11, "loudness": -4.431, "mode": 1, "speechiness": 0.0583, "acousticness": 0.16, "instrumentalness": 0.000211, "liveness": 0.13, "valence": 0.694, "tempo": 175.969}, {"song_name": "Hopeless Romantic", "song_uri": "spotify:track:180mXjN61yhrKhbY2yQc0E", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Hopeless Romantic", "album_uri": "spotify:album:56CbFyDsG65LI1Eoh7hsOT", "popularity": 49, "danceability": 0.243, "energy": 0.981, "key": 4, "loudness": -5.251, "mode": 1, "speechiness": 0.074, "acousticness": 0.000164, "instrumentalness": 1.11e-05, "liveness": 0.207, "valence": 0.216, "tempo": 105.022}, {"song_name": "Manthem", "song_uri": "spotify:track:5pSjxUAwOol5e0TWp1ecHC", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "How I Spent My Summer Vacation", "album_uri": "spotify:album:64zbLX1ze8N3kcAMX0qq7G", "popularity": 46, "danceability": 0.524, "energy": 0.986, "key": 2, "loudness": -2.865, "mode": 1, "speechiness": 0.0634, "acousticness": 9.44e-05, "instrumentalness": 0.000214, "liveness": 0.0772, "valence": 0.724, "tempo": 94.348}, {"song_name": "Sing Along Forever", "song_uri": "spotify:track:5feYKXxg4HL2APTQGCfAav", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Anchors Aweigh", "album_uri": "spotify:album:1xgfRXjCoynPLqtdNu50pR", "popularity": 46, "danceability": 0.592, "energy": 0.964, "key": 0, "loudness": -3.672, "mode": 1, "speechiness": 0.0817, "acousticness": 0.00912, "instrumentalness": 0, "liveness": 0.27, "valence": 0.585, "tempo": 101.252}, {"song_name": "Say Anything", "song_uri": "spotify:track:06peZfvxR5721oGqHwogha", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "The Bouncing Souls", "album_uri": "spotify:album:7LgICzKkhaLV9Gttn8xM7a", "popularity": 45, "danceability": 0.448, "energy": 0.995, "key": 6, "loudness": -3.111, "mode": 1, "speechiness": 0.0539, "acousticness": 0.00275, "instrumentalness": 0, "liveness": 0.297, "valence": 0.643, "tempo": 101.405}, {"song_name": "Ole", "song_uri": "spotify:track:2McQQA5nCLVL0XvzcxWhFC", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Hopeless Romantic", "album_uri": "spotify:album:56CbFyDsG65LI1Eoh7hsOT", "popularity": 43, "danceability": 0.33, "energy": 0.833, "key": 7, "loudness": -6.507, "mode": 1, "speechiness": 0.0768, "acousticness": 0.0491, "instrumentalness": 0, "liveness": 0.687, "valence": 0.553, "tempo": 128.329}, {"song_name": "Ten Stories High", "song_uri": "spotify:track:1t9Y1HGwikUCCo5xCupAnT", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Ten Stories High", "album_uri": "spotify:album:0wdbr46ndnwB1cgZoNzT48", "popularity": 30, "danceability": 0.361, "energy": 0.984, "key": 5, "loudness": -1.913, "mode": 1, "speechiness": 0.0883, "acousticness": 0.000322, "instrumentalness": 0.000873, "liveness": 0.329, "valence": 0.491, "tempo": 198.064}, {"song_name": "Kids and Heroes", "song_uri": "spotify:track:7ru4QA7k7ViuLS9oDtdRBI", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "Anchors Aweigh", "album_uri": "spotify:album:1xgfRXjCoynPLqtdNu50pR", "popularity": 43, "danceability": 0.405, "energy": 0.963, "key": 0, "loudness": -5.216, "mode": 1, "speechiness": 0.0697, "acousticness": 0.0127, "instrumentalness": 0.000256, "liveness": 0.289, "valence": 0.198, "tempo": 101.759}, {"song_name": "Kate Is Great", "song_uri": "spotify:track:1VT2wLreLu0l7E4T0JDedh", "artist_name": "The Bouncing Souls", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_name": "The Bouncing Souls", "album_uri": "spotify:album:7LgICzKkhaLV9Gttn8xM7a", "popularity": 42, "danceability": 0.358, "energy": 0.93, "key": 2, "loudness": -4.726, "mode": 1, "speechiness": 0.164, "acousticness": 0.0822, "instrumentalness": 0, "liveness": 0.0699, "valence": 0.809, "tempo": 175.011}]'</code></pre>
+</div>
+</div>
+<p><strong>Looks great!</strong> These don’t answer our question, they only provides the data, so we’ll need one more step.</p>
+</section>
+<section id="llmchain-for-cleanup" class="level2">
+<h2 class="anchored" data-anchor-id="llmchain-for-cleanup">LLMChain for cleanup</h2>
+<p>This is similar to what happens in the <code>APIChain</code>: we have an API response, but we want something a little more human. We’ll use an <code>LLMChain</code> to send the JSON to GPT along with our question, then get back a readable response.</p>
+<div class="cell" data-execution_count="325">
+<div class="sourceCode cell-code" id="cb40" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1">RESPONSE_CLEANUP_PROMPT_TEMPLATE <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> (<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">""" </span></span>
+<span id="cb40-2"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Using this code:</span></span>
+<span id="cb40-3"></span>
+<span id="cb40-4"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">```python</span></span>
+<span id="cb40-5"><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{intermediate_steps}</span></span>
+<span id="cb40-6"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">```</span></span>
+<span id="cb40-7"></span>
+<span id="cb40-8"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">We got the following output from the Spotify API:</span></span>
+<span id="cb40-9"></span>
+<span id="cb40-10"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">```json</span></span>
+<span id="cb40-11"><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{result}</span></span>
+<span id="cb40-12"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">```</span></span>
+<span id="cb40-13"></span>
+<span id="cb40-14"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Using the output above as your data source, answer the question </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{question}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">. Don't describe the code or process, just answer the question.</span></span>
+<span id="cb40-15"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Answer:"""</span></span>
+<span id="cb40-16">)</span>
+<span id="cb40-17"></span>
+<span id="cb40-18">RESPONSE_CLEANUP_PROMPT <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PromptTemplate(</span>
+<span id="cb40-19">    input_variables<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"question"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"intermediate_steps"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"result"</span>],</span>
+<span id="cb40-20">    template<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>RESPONSE_CLEANUP_PROMPT_TEMPLATE,</span>
+<span id="cb40-21">)</span></code></pre></div>
+</div>
+<p>In the prompt above, we’re providing three things to the prompt:</p>
+<ul>
+<li>The original <strong>question</strong> we want an answer to</li>
+<li>The <strong>intermediate steps</strong>, which is the actual Python code the <code>PALChain</code> created</li>
+<li>The <strong>result</strong>, the <em>output</em> of the Python code from the <code>PALChain</code> (aka the JSON)</li>
+</ul>
+<p>We can now use this prompt with an <code>LLMChain</code> to turn the JSON into an actual answer.</p>
+<div class="cell" data-execution_count="326">
+<div class="sourceCode cell-code" id="cb41" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1">explainer_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> LLMChain(</span>
+<span id="cb41-2">    llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm,</span>
+<span id="cb41-3">    prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>RESPONSE_CLEANUP_PROMPT,</span>
+<span id="cb41-4">    verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>,</span>
+<span id="cb41-5">    output_key<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'answer'</span></span>
+<span id="cb41-6">)</span></code></pre></div>
+</div>
+<p>Now that we’ve built the structure of the explainer, let’s feed it the previous Spotify response and see what happens.</p>
+<div class="cell" data-execution_count="327">
+<div class="sourceCode cell-code" id="cb42" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1">explainer_response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> explainer_chain(spotify_response)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new LLMChain chain...
+Prompt after formatting:
+ 
+Using this code:
+
+```python
+def solution():
+    """What are the most popular Bouncing Souls songs?"""
+    search_results = sp.search(q='Bouncing Souls', type='artist')
+    uri = search_results['artists']['items'][0]['uri']
+    top_tracks = sp.artist_top_tracks(uri)
+    tracks = []
+    for i, track in enumerate(top_tracks['tracks']):
+        # Only include relevant fields
+        tracks.append({
+            'position': i+1,
+            'song_name': track.get('name'),
+            'song_uri': track.get('uri'),
+            'artist_uri': uri,
+            'album_uri': track.get('album').get('uri'),
+            'album_name': track.get('album').get('name'),
+            'popularity': track.get('popularity')
+        })
+    return tracks
+```
+
+We got the following output from the Spotify API:
+
+```json
+[{"position": 1, "song_name": "True Believers", "song_uri": "spotify:track:4fRmFVMd0c1SGfzazBJIM8", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:64zbLX1ze8N3kcAMX0qq7G", "album_name": "How I Spent My Summer Vacation", "popularity": 54}, {"position": 2, "song_name": "Lean On Sheena", "song_uri": "spotify:track:7IR7GUO0dUyUsBp7BfQ3vJ", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:3MF7PvmrMjEXGvA8fP3L6l", "album_name": "The Gold Record", "popularity": 51}, {"position": 3, "song_name": "Hopeless Romantic", "song_uri": "spotify:track:180mXjN61yhrKhbY2yQc0E", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:56CbFyDsG65LI1Eoh7hsOT", "album_name": "Hopeless Romantic", "popularity": 49}, {"position": 4, "song_name": "Manthem", "song_uri": "spotify:track:5pSjxUAwOol5e0TWp1ecHC", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:64zbLX1ze8N3kcAMX0qq7G", "album_name": "How I Spent My Summer Vacation", "popularity": 46}, {"position": 5, "song_name": "Sing Along Forever", "song_uri": "spotify:track:5feYKXxg4HL2APTQGCfAav", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:1xgfRXjCoynPLqtdNu50pR", "album_name": "Anchors Aweigh", "popularity": 46}, {"position": 6, "song_name": "Say Anything", "song_uri": "spotify:track:06peZfvxR5721oGqHwogha", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:7LgICzKkhaLV9Gttn8xM7a", "album_name": "The Bouncing Souls", "popularity": 45}, {"position": 7, "song_name": "Ole", "song_uri": "spotify:track:2McQQA5nCLVL0XvzcxWhFC", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:56CbFyDsG65LI1Eoh7hsOT", "album_name": "Hopeless Romantic", "popularity": 43}, {"position": 8, "song_name": "Kids and Heroes", "song_uri": "spotify:track:7ru4QA7k7ViuLS9oDtdRBI", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:1xgfRXjCoynPLqtdNu50pR", "album_name": "Anchors Aweigh", "popularity": 42}, {"position": 9, "song_name": "Kate Is Great", "song_uri": "spotify:track:1VT2wLreLu0l7E4T0JDedh", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:7LgICzKkhaLV9Gttn8xM7a", "album_name": "The Bouncing Souls", "popularity": 41}, {"position": 10, "song_name": "Ten Stories High", "song_uri": "spotify:track:0Wz9RJySVFtUTFQk8sjRBv", "artist_uri": "spotify:artist:3mvTAjG7rcyk7DQzLwauzV", "album_uri": "spotify:album:5xEwUAv3WJiDtHScEPliQl", "album_name": "Ten Stories High", "popularity": 40}]
+```
+
+Using the output above as your data source, answer the question What are the most popular Bouncing Souls songs?. Don't describe the code or process, just answer the question.
+Answer:
+
+&gt; Finished chain.</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="328">
+<div class="sourceCode cell-code" id="cb44" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(explainer_response[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'answer'</span>])</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>The most popular Bouncing Souls songs, based on the provided data, are:
+
+1. True Believers
+2. Lean On Sheena
+3. Hopeless Romantic
+4. Manthem
+5. Sing Along Forever
+6. Say Anything
+7. Ole
+8. Kids and Heroes
+9. Kate Is Great
+10. Ten Stories High</code></pre>
+</div>
+</div>
+<p>I completely disagree with everyone’s taste in music, but it’s a perfect response!</p>
+</section>
+</section>
+<section id="connecting-the-chains" class="level1">
+<h1>Connecting the chains</h1>
+<p>Now that we have a working <code>PALChain</code> to access the API and an <code>LLMChain</code> to process the resulting JSON, let’s connect them together so this no longer takes two steps.</p>
+<p>We’re going to use a <code>SequentialChain</code> instead of a <code>SimpleSequentialChain</code> because the explainer chain needs the question, code <em>and</em> output from the API chain. The SSC only supports one thing being passed along, which would restrict its ability to get all of the necessary information.</p>
+<div class="cell" data-execution_count="329">
+<div class="sourceCode cell-code" id="cb46" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chains <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> SequentialChain</span>
+<span id="cb46-2"></span>
+<span id="cb46-3">overall_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> SequentialChain(</span>
+<span id="cb46-4">    chains<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[spotify_chain, explainer_chain],</span>
+<span id="cb46-5">    input_variables<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'question'</span>],</span>
+<span id="cb46-6">    verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span></span>
+<span id="cb46-7">)</span></code></pre></div>
+</div>
+<div class="cell" data-execution_count="330">
+<div class="sourceCode cell-code" id="cb47" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1">overall_response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> overall_chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Give me a list of Cars, Blink 182 and Sum 41 songs that are upbeat, loud and fun. Make sure the songs are popular enough for me to have heard of them."</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new SequentialChain chain...
+
+
+&gt; Entering new PALChain chain...
+def solution():
+    """Give me a list of Cars, Blink 182 and Sum 41 songs that are upbeat, loud and fun."""
+    # Get the URIs for the artists
+    artists = ['The Cars', 'Blink-182', 'Sum 41']
+    artist_uris = []
+    for artist in artists:
+        search_results = sp.search(q=artist, type='artist', limit=1)
+        if search_results['artists']['total'] &gt; 0:
+            artist_uri = search_results['artists']['items'][0]['uri']
+            artist_uris.append(artist_uri)
+    # Get the top tracks for each artist
+    tracks = []
+    for artist_uri in artist_uris:
+        artist_tracks = sp.artist_top_tracks(artist_uri)
+        tracks.extend(artist_tracks['tracks'])
+    track_uris = [track['uri'] for track in tracks]
+    # Only keep tracks that are upbeat, loud and fun
+    upbeat_tracks = []
+    for i in range(0, len(track_uris), 100):
+        subset_track_uris = track_uris[i:i+100]
+        audio_details = sp.audio_features(subset_track_uris)
+        for j, details in enumerate(audio_details):
+            if details['valence'] &gt; 0.7 and details['energy'] &gt; 0.7 and details['loudness'] &gt; -7:
+                track = tracks[i+j]
+                upbeat_tracks.append({
+                    'song': track.get('name'),
+                    'artist': track.get('artists')[0].get('name'),
+                    'album': track.get('album').get('name'),
+                    'valence': details.get('valence'),
+                    'energy': details.get('energy'),
+                    'loudness': details.get('loudness'),
+                    'song_uri': track.get('uri'),
+                    'artist_uri': track.get('artists')[0].get('uri'),
+                    'album_uri': track.get('album').get('uri')
+                })
+    return upbeat_tracks[:30]
+
+&gt; Finished chain.
+
+
+&gt; Entering new LLMChain chain...
+Prompt after formatting:
+ 
+Using this code:
+
+```python
+def solution():
+    """Give me a list of Cars, Blink 182 and Sum 41 songs that are upbeat, loud and fun."""
+    # Get the URIs for the artists
+    artists = ['The Cars', 'Blink-182', 'Sum 41']
+    artist_uris = []
+    for artist in artists:
+        search_results = sp.search(q=artist, type='artist', limit=1)
+        if search_results['artists']['total'] &gt; 0:
+            artist_uri = search_results['artists']['items'][0]['uri']
+            artist_uris.append(artist_uri)
+    # Get the top tracks for each artist
+    tracks = []
+    for artist_uri in artist_uris:
+        artist_tracks = sp.artist_top_tracks(artist_uri)
+        tracks.extend(artist_tracks['tracks'])
+    track_uris = [track['uri'] for track in tracks]
+    # Only keep tracks that are upbeat, loud and fun
+    upbeat_tracks = []
+    for i in range(0, len(track_uris), 100):
+        subset_track_uris = track_uris[i:i+100]
+        audio_details = sp.audio_features(subset_track_uris)
+        for j, details in enumerate(audio_details):
+            if details['valence'] &gt; 0.7 and details['energy'] &gt; 0.7 and details['loudness'] &gt; -7:
+                track = tracks[i+j]
+                upbeat_tracks.append({
+                    'song': track.get('name'),
+                    'artist': track.get('artists')[0].get('name'),
+                    'album': track.get('album').get('name'),
+                    'valence': details.get('valence'),
+                    'energy': details.get('energy'),
+                    'loudness': details.get('loudness'),
+                    'song_uri': track.get('uri'),
+                    'artist_uri': track.get('artists')[0].get('uri'),
+                    'album_uri': track.get('album').get('uri')
+                })
+    return upbeat_tracks[:30]
+```
+
+We got the following output from the Spotify API:
+
+```json
+[{"song": "You Might Think", "artist": "The Cars", "album": "Heartbeat City (Expanded Edition)", "valence": 0.971, "energy": 0.855, "loudness": -6.031, "song_uri": "spotify:track:35wVRTJlUu2kDkqXFegOKt", "artist_uri": "spotify:artist:6DCIj8jNaNpBz8e5oKFPtp", "album_uri": "spotify:album:7LPfdVDw4uXf9Bw5LQDESf"}, {"song": "Magic - 2017 Remaster", "artist": "The Cars", "album": "Heartbeat City (Expanded Edition)", "valence": 0.964, "energy": 0.794, "loudness": -6.381, "song_uri": "spotify:track:0SAbkr0dS7WK3yJSjaZSZl", "artist_uri": "spotify:artist:6DCIj8jNaNpBz8e5oKFPtp", "album_uri": "spotify:album:7LPfdVDw4uXf9Bw5LQDESf"}, {"song": "Shake It Up - 2017 Remaster", "artist": "The Cars", "album": "Shake It Up (Expanded Edition)", "valence": 0.854, "energy": 0.827, "loudness": -5.738, "song_uri": "spotify:track:3ZBzJbqwV2gQUAe4ofghOo", "artist_uri": "spotify:artist:6DCIj8jNaNpBz8e5oKFPtp", "album_uri": "spotify:album:7KpSpJbHn3SYZIMHKkdO6V"}, {"song": "First Date", "artist": "blink-182", "album": "Take Off Your Pants And Jacket", "valence": 0.882, "energy": 0.928, "loudness": -4.344, "song_uri": "spotify:track:1fJFuvU2ldmeAm5nFIHcPP", "artist_uri": "spotify:artist:6FBDaR13swtiWwGhX1WQsP", "album_uri": "spotify:album:3nHpBmW5wJXGeC3ojBkpey"}, {"song": "The Rock Show", "artist": "blink-182", "album": "Take Off Your Pants And Jacket", "valence": 0.83, "energy": 0.959, "loudness": -4.563, "song_uri": "spotify:track:2ydUT1pFhuLDnouelIv4WH", "artist_uri": "spotify:artist:6FBDaR13swtiWwGhX1WQsP", "album_uri": "spotify:album:3nHpBmW5wJXGeC3ojBkpey"}, {"song": "EDGING", "artist": "blink-182", "album": "EDGING", "valence": 0.706, "energy": 0.905, "loudness": -3.117, "song_uri": "spotify:track:2wVWGFVkL5I3JGsoWBx2AZ", "artist_uri": "spotify:artist:6FBDaR13swtiWwGhX1WQsP", "album_uri": "spotify:album:0EspGdWdoWAxa5mBdQ5z55"}, {"song": "In Too Deep", "artist": "Sum 41", "album": "All Killer, No Filler", "valence": 0.766, "energy": 0.844, "loudness": -5.875, "song_uri": "spotify:track:1HNE2PX70ztbEl6MLxrpNL", "artist_uri": "spotify:artist:0qT79UgT5tY4yudH9VfsdT", "album_uri": "spotify:album:2UCWsnmZEVg9HhnMeKTsim"}, {"song": "Over My Head (Better Off Dead)", "artist": "Sum 41", "album": "Does This Look Infected?", "valence": 0.773, "energy": 0.919, "loudness": -4.462, "song_uri": "spotify:track:3SO0vfryYv381w1ImgWONG", "artist_uri": "spotify:artist:0qT79UgT5tY4yudH9VfsdT", "album_uri": "spotify:album:2kLmv0O8blKeM5HKxLtQrC"}, {"song": "Underclass Hero", "artist": "Sum 41", "album": "Underclass Hero", "valence": 0.765, "energy": 0.988, "loudness": -2.979, "song_uri": "spotify:track:6dXizHF3KbmdvOgvMAhnQC", "artist_uri": "spotify:artist:0qT79UgT5tY4yudH9VfsdT", "album_uri": "spotify:album:4fc73QNw5EjIorFfZ6n6YG"}]
+```
+
+Using the output above as your data source, answer the question Give me a list of Cars, Blink 182 and Sum 41 songs that are upbeat, loud and fun. Make sure the songs are popular enough for me to have heard of them.. Don't describe the code or process, just answer the question.
+Answer:
+
+&gt; Finished chain.
+
+&gt; Finished chain.</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="331">
+<div class="sourceCode cell-code" id="cb49" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(overall_response)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>- You Might Think by The Cars
+- Magic by The Cars 
+- Shake It Up by The Cars
+- First Date by blink-182 
+- The Rock Show by blink-182 
+- In Too Deep by Sum 41 
+- Over My Head (Better Off Dead) by Sum 41 
+- Underclass Hero by Sum 41</code></pre>
+</div>
+</div>
+<p><strong>Tada! There we go! That’s it!</strong> That’s… it? Guess the magic is in the process.</p>
+<p>Let’s see how it approached each aspect of my prompt:</p>
+<blockquote class="blockquote">
+<p>Give me a list of Cars, Blink 182 and Sum 41 songs</p>
+</blockquote>
+<p>Made a list of the bands, looped through each band to search for them.</p>
+<div class="sourceCode" id="cb51" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1">artists <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'The Cars'</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Blink-182'</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'Sum 41'</span>]</span>
+<span id="cb51-2">artist_uris <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb51-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> artist <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> artists:</span>
+<span id="cb51-4">    search_results <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sp.search(q<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>artist, <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">type</span><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'artist'</span>, limit<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span></code></pre></div>
+<blockquote class="blockquote">
+<p>Make sure the songs are popular enough for me to have heard of them.</p>
+</blockquote>
+<p>GPT only pulled the top tracks from each artist, which implies popularity.</p>
+<div class="sourceCode" id="cb52" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> artist_uri <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> artist_uris:</span>
+<span id="cb52-2">    artist_tracks <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sp.artist_top_tracks(artist_uri)</span>
+<span id="cb52-3">    tracks.extend(artist_tracks[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'tracks'</span>])</span></code></pre></div>
+<blockquote class="blockquote">
+<p>that are upbeat, loud and fun.</p>
+</blockquote>
+<p>Filtering is done based on scores of valence, energy and loudness. Valence is “musical positiveness,” so that plus energy and loudness seems like a reasonable decision.</p>
+<div class="sourceCode" id="cb53" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1">audio_details <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> sp.audio_features(subset_track_uris)</span>
+<span id="cb53-2"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">for</span> j, details <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">in</span> <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">enumerate</span>(audio_details):</span>
+<span id="cb53-3">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">if</span> details[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'valence'</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.7</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">and</span> details[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'energy'</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="fl" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0.7</span> <span class="kw" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">and</span> details[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'loudness'</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;</span> <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">7</span>:</span>
+<span id="cb53-4">        track <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> tracks[i<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">+</span>j]</span></code></pre></div>
+<p>One of the redeeming parts of running this code again and again was seeing how GPT translated the qualitative characteristics like “loud” or “fun” into actual quantitative numbers. Almost every time was a little bit different!</p>
+</section>
+<section id="reflections" class="level1">
+<h1>Reflections</h1>
+<p>Mission: accomplished?</p>
+<p>This was not as easy as I thought, <em>and</em> the end result isn’t as nice as I’d like! But the path was really worth it in terms of exploration and understanding. Let’s talk about a few difficulties I ran into:</p>
+<p><strong>I resisted reading the LangChain source early on,</strong> and trying to make do with only the examples really slowed me down. Just open the code!!!! It’s plenty readable and concepts that might have been fuzzy clear up when you really dig in and see how the pieces fit together.</p>
+<p><strong>Reminding GPT of gotchas with the Spotify API was difficult.</strong> For example, tracks don’t have <code>track['album']['name']</code> if they’re from the <code>sp.album_tracks</code> endpoint while they do from <code>sp.artist_top_tracks</code>, different endpoints have different limits, etc etc. Carefully crafting examples while trying to not have ten thousand of them was not fun.</p>
+<p><strong>Convincing the PALChain to not do too much work was almost impossible.</strong> Since a Python-executing <code>PALChain</code> can do pretty much <em>anything</em>, it would often end up giving me Markdown tables or other formatting situations that I was hoping to instead get from the later <code>LLMChain</code> output. The fix as a combination of fine-tuning the prompt – <em>“you are ONLY providing DATA”</em> – and adjusting my queries into a format closer to “find this data, then display it this way.”</p>
+<p>All in all, maybe this would probably be better broken up into pieces via ReAct tools? I just didn’t think of that until I was like halfway through, but we at least survived.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+It didn’t make a playlist!!! It just gave you a list of songs!!!
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>As much as I’m proud of my little LangChain child here, I was not about to give this bad boy access to my Spotify playlists. That also would have simplified the process - instead of going through the second <code>LLMChain</code>, we could have simply stopped at the <code>PALChain</code> part!</p>
+<p>It’s also slightly more complicated auth flow with Spotify, which I didn’t want to step through. Maybe next time!</p>
+</div>
+</div>
+
+
+</section>
+
+ ]]></description>
+  <guid>https://jonathansoma.com/words/custom-execution-chain.html</guid>
+  <pubDate>Mon, 27 Mar 2023 04:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Multi-language document Q&amp;A with LangChain and GPT-3.5-turbo</title>
   <dc:creator>Jonathan Soma</dc:creator>
@@ -242,7 +2091,7 @@ font-style: inherit;">109</span>]</span></code></pre></div>
 <p><strong>The cat is in the house</strong> is the best match from our original list, <em>even though it doesn’t have any words that match</em>. But if we ignore the words and look at the scores, it’s clearly the best match! That’s more or less the basic idea behind text embeddings and semantic search.</p>
 <p>Instead of reasonable categories like mine, actual embeddings are something like 384 or 512 different dimensions your text is scored on. And unlike “shopping” or “animal” above, the dimensions aren’t anything you can understand. They’re generated by computers that have read a lot lot lot of the internet, so we just have to trust them!</p>
 <blockquote class="blockquote">
-<p>You might want to read <a href="https://investigate.ai/text-analysis/word-embeddings/">my introduction to word embeddings</a> for more details and <a href="https://investigate.ai/text-analysis/document-similarity-using-word-embeddings/">conceptual document similarity</a>.</p>
+<p>You might want to read <a href="https://investigate.ai/text-analysis/word-embeddings/">my introduction to word embeddings</a> and <a href="https://investigate.ai/text-analysis/document-similarity-using-word-embeddings/">conceptual document similarity</a> for more details.</p>
 </blockquote>
 </section>
 <section id="creating-and-searching-our-embeddings-database" class="level3">
