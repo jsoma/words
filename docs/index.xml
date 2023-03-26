@@ -32,7 +32,8 @@
 <li>How LangChain’s <code>APIChain</code> (API access) and <code>PALChain</code> (Python execution) chains are built</li>
 <li>How to take parts of both to allow execution of arbitrary Python tools and summaries of the results</li>
 </ol>
-<p>If you are a less technical person, <strong>just relax for the next couple sections.</strong> We’re just laying the groundwork for how and why we need to jump through all these hoops.</p>
+<p>If you’re a LangChain pro and are just looking for code to run, you can can skip all these words <a href="https://jonathansoma.com/words/custom-execution-chain.html">and just visit the GitHub repo</a></p>
+<p>If you are a less technical person, just relax while you’re reading the next few sections! They’re the “why” for how we end up tackling our problem.</p>
 </section>
 <section id="the-playlist" class="level1">
 <h1>The Playlist</h1>
@@ -1852,6 +1853,7 @@ It didn’t make a playlist!!! It just gave you a list of songs!!!
 <p>It’s also slightly more complicated auth flow with Spotify, which I didn’t want to step through. Maybe next time!</p>
 </div>
 </div>
+<p>Feel free to check <a href="https://github.com/jsoma/spotify-langchain-gpt">the GitHub repo</a> if you’d like a simple notebook that has the code pre-arranged for you.</p>
 
 
 </section>
