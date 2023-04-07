@@ -2,7 +2,8 @@
   {
     "listing": "/index.html",
     "items": [
-      "/custom-execution-chain.html",
+      "/three-ways-to-scrape-langchain.html",
+      "/spotify-langchain-chatgpt.html",
       "/multi-language-qa-gpt.html"
     ]
   }

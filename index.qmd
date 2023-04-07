@@ -2,6 +2,8 @@
 title: "An awful default creation of Jonathan Soma"
 listing:
   contents: "*.ipynb"
+  include:
+    published: true
   sort: "date desc"
   type: table
   categories: true
