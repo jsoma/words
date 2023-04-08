@@ -6,6 +6,7 @@ div.sourceCode, div.sourceCode pre.sourceCode,
 pre>code,
 pre>code.sourceCode {
     white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .cell-output.cell-output-stdout {

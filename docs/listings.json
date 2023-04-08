@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/documenting-apis-gpt-langchain.html",
       "/three-ways-to-scrape-langchain.html",
       "/spotify-langchain-chatgpt.html",
       "/multi-language-qa-gpt.html"

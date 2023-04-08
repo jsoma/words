@@ -10,7 +10,751 @@
 <atom:link href="https://jonathansoma.com/words/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.3.272</generator>
-<lastBuildDate>Sat, 08 Apr 2023 04:00:00 GMT</lastBuildDate>
+<lastBuildDate>Sun, 09 Apr 2023 04:00:00 GMT</lastBuildDate>
+<item>
+  <title>Exploring and explaining undocumented APIs with ChatGPT and LangChain</title>
+  <dc:creator>Jonathan Soma</dc:creator>
+  <link>https://jonathansoma.com/words/documenting-apis-gpt-langchain.html</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
+<section id="the-secret-world-of-undocumented-apis" class="level1">
+<h1>The secret world of undocumented APIs</h1>
+<p>While scraping a website is all good and fun, sometimes there’s a better/faster/cheaper way to get your data: <strong>undocumented APIs!</strong></p>
+<p>An API is how two computers talk to each other without the ugliness of the web getting involved. To be overly simplistic, instead of browsing a site like a normal human being, your computer visits a special URL to search or download data in bulk. For example, Twitter’s API is how researchers got millions and millions of tweets before Musk locked ’em all out.</p>
+<p>While many APIs are public-facing and advertised, some are semi-secret or unofficial. For example, when you visit <a href="https://pitchfork.com">Pitchfork</a> and search for music reviews, your browser secretly visits <a href="https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0">this URL</a> to find the data that it eventually displays on the page. That listing of data – the API “endpoint” – is all about computers reading it, not people, so it looks awful and ugly and very much like this:</p>
+<div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1">{<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"count"</span>:<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">10000</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"previous"</span>:null,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"next"</span>:null,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"results"</span>:{<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"category"</span>:null,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"list"</span>:[{<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"dek"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"&lt;p&gt;The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs.&lt;/p&gt;</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"seoDescription"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs."</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"promoDescription"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"&lt;p&gt;The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs.&lt;/p&gt;</span><span class="ch" style="color: #20794D;
+background-color: null;
+font-style: inherit;">\n</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"socialDescription"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs."</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"authors"</span>:[{<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"id"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"592604b57fd06e5349102f43"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"name"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Evan Minsker"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"title"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Associate News Director"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"url"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"/staff/evan-minsker/"</span>,<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"slug"</span>:<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"staff/evan-minsker"</span>}]</span></code></pre></div>
+<p>Horrifying, right? In this tutorial, we’ll be looking at three things:</p>
+<ol type="1">
+<li>Exploring how LangChain talks to APIs</li>
+<li>Using ChatGPT to document previously-undocumented APIs</li>
+<li>Comparing two techniques for enabling LangChain to use undocumented APIs (explicit vs implicit documentation)</li>
+</ol>
+<p>By the end we’ll have developed a tool that can use the unofficial Pitchfork API to answer natural-language questions about albums they’ve reviewed.</p>
+<div class="callout callout-style-simple callout-note">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-body-container">
+<p>Want to learn how to discover undocumented APIs? Check out <a href="https://inspectelement.org/apis.html">Inspect Element</a> by <a href="https://twitter.com/leonYin/">Leon Yin</a>!</p>
+</div>
+</div>
+</div>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<p>Give me one moment to set things up! First we’ll pull in all of our API keys using <a href="https://pypi.org/project/python-dotenv/">python-dotenv</a>, then we’ll use a thousand and one imports to bring in LangChain and friends.</p>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span>load_ext dotenv</span>
+<span id="cb2-2"><span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%</span>dotenv</span></code></pre></div>
+</div>
+<div class="cell" data-execution_count="144">
+<div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># LangChain imports</span></span>
+<span id="cb3-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.agents <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> initialize_agent</span>
+<span id="cb3-3"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chat_models <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> ChatOpenAI</span>
+<span id="cb3-4"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.chains <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> APIChain</span>
+<span id="cb3-5"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.prompts.prompt <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PromptTemplate</span>
+<span id="cb3-6"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.callbacks <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> get_openai_callback</span>
+<span id="cb3-7"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> LLMChain</span>
+<span id="cb3-8"></span>
+<span id="cb3-9"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Normal human imports</span></span>
+<span id="cb3-10"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> requests</span>
+<span id="cb3-11"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> bs4 <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> BeautifulSoup</span>
+<span id="cb3-12"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> json</span></code></pre></div>
+</div>
+<p>Even though GPT-4 is out, we’ll be using GPT-3.5-turbo for this one. At the moment it’s infinitely cheaper, and every penny matters!</p>
+<div class="cell" data-execution_count="113">
+<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1">llm <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ChatOpenAI(model<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'gpt-3.5-turbo'</span>, temperature<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>)</span></code></pre></div>
+</div>
+</section>
+</section>
+<section id="langchain-and-documented-apis" class="level1">
+<h1>LangChain and documented APIs</h1>
+<p><a href="https://python.langchain.com">LangChain</a> is a “framework for developing applications powered by language models,” which really undersells the fact that it’s a universe-altering suite of tools for putting GPT (and related tools) to work. In this tutorial we’re focusing on how it <strong>interacts with APIs.</strong></p>
+<p>In the <a href="https://python.langchain.com/en/latest/modules/chains/examples/api.html">LangChain documentation for working with APIs</a> there’s a super-simple example of using <code>APIChain</code> to get an answer from a <a href="https://open-meteo.com/">free weather API</a>. You create your API-aware “chain” from two things: your large language model (in this case, GPT-3.5-turbo) and the documentation to the API.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> APIChain.from_llm_and_api_docs(llm, open_meteo_docs.OPEN_METEO_DOCS, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span></code></pre></div>
+</div>
+<p>Once your chain is created, you ask it your question and the chain goes to work sending information back and forth with ChatGPT:</p>
+<ol type="1">
+<li>The chain sends the API docs to ChatGPT, asking what API URL you should visit</li>
+<li>ChatGPT reads the docs, sends back a URL</li>
+<li>LangChain obtains the data from the URL</li>
+<li>The data is sent back to ChatGPT, which uses it to answer your question</li>
+</ol>
+<p>Let’s see it in action:</p>
+<div class="cell" data-execution_count="114">
+<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1">chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">'What is the weather like right now in Munich, Germany in degrees Farenheit?'</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://api.open-meteo.com/v1/forecast?latitude=48.137154&amp;longitude=11.576124&amp;current_weather=true&amp;temperature_unit=fahrenheit
+{"latitude":48.14,"longitude":11.58,"generationtime_ms":0.15795230865478516,"utc_offset_seconds":0,"timezone":"GMT","timezone_abbreviation":"GMT","elevation":526.0,"current_weather":{"temperature":40.2,"windspeed":8.8,"winddirection":261.0,"weathercode":2,"is_day":0,"time":"2023-04-08T00:00"}}
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="114">
+<pre><code>'The current weather in Munich, Germany is 40.2 degrees Fahrenheit.'</code></pre>
+</div>
+</div>
+<p>You can see each step of the process: the URL, the data, the answer! This transparency is thanks to us using <code>verbose=True</code> when we first created the chain.</p>
+<p>The “secret sauce” of the <code>APIChain</code> formula is the OpenMeteo API documentation. The documentation is detailed enough to provide ChatGPT with everything it needs to know in creating the API URL: from what I can see, it needs a latitude and longitude, a <code>current_weather=true</code>, and a demand to be in degrees fahrenheit.</p>
+<p>How detailed is the OpenMeteo documentation that ChatGPT is using? It’s easy enough to examine the documentation for this particular API, as it’s actually provided as part of LangChain:</p>
+<div class="cell" data-execution_count="115">
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(open_meteo_docs.OPEN_METEO_DOCS)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>BASE URL: https://api.open-meteo.com/
+
+API Documentation
+The API endpoint /v1/forecast accepts a geographical coordinate, a list of weather variables and responds with a JSON hourly weather forecast for 7 days. Time always starts at 0:00 today and contains 168 hours. All URL parameters are listed below:
+
+Parameter   Format  Required    Default Description
+latitude, longitude Floating point  Yes     Geographical WGS84 coordinate of the location
+hourly  String array    No      A list of weather variables which should be returned. Values can be comma separated, or multiple &amp;hourly= parameter in the URL can be used.
+daily   String array    No      A list of daily weather variable aggregations which should be returned. Values can be comma separated, or multiple &amp;daily= parameter in the URL can be used. If daily weather variables are specified, parameter timezone is required.
+current_weather Bool    No  false   Include current weather conditions in the JSON output.
+temperature_unit    String  No  celsius If fahrenheit is set, all temperature values are converted to Fahrenheit.
+windspeed_unit  String  No  kmh Other wind speed speed units: ms, mph and kn
+precipitation_unit  String  No  mm  Other precipitation amount units: inch
+timeformat  String  No  iso8601 If format unixtime is selected, all time values are returned in UNIX epoch time in seconds. Please note that all timestamp are in GMT+0! For daily values with unix timestamps, please apply utc_offset_seconds again to get the correct date.
+timezone    String  No  GMT If timezone is set, all timestamps are returned as local-time and data is returned starting at 00:00 local-time. Any time zone name from the time zone database is supported. If auto is set as a time zone, the coordinates will be automatically resolved to the local time zone.
+past_days   Integer (0-2)   No  0   If past_days is set, yesterday or the day before yesterday data are also returned.
+start_date
+end_date    String (yyyy-mm-dd) No      The time interval to get weather data. A day must be specified as an ISO8601 date (e.g. 2022-06-30).
+models  String array    No  auto    Manually select one or more weather models. Per default, the best suitable weather models will be combined.
+
+Hourly Parameter Definition
+The parameter &amp;hourly= accepts the following values. Most weather variables are given as an instantaneous value for the indicated hour. Some variables like precipitation are calculated from the preceding hour as an average or sum.
+
+Variable    Valid time  Unit    Description
+temperature_2m  Instant °C (°F) Air temperature at 2 meters above ground
+snowfall    Preceding hour sum  cm (inch)   Snowfall amount of the preceding hour in centimeters. For the water equivalent in millimeter, divide by 7. E.g. 7 cm snow = 10 mm precipitation water equivalent
+rain    Preceding hour sum  mm (inch)   Rain from large scale weather systems of the preceding hour in millimeter
+showers Preceding hour sum  mm (inch)   Showers from convective precipitation in millimeters from the preceding hour
+weathercode Instant WMO code    Weather condition as a numeric code. Follow WMO weather interpretation codes. See table below for details.
+snow_depth  Instant meters  Snow depth on the ground
+freezinglevel_height    Instant meters  Altitude above sea level of the 0°C level
+visibility  Instant meters  Viewing distance in meters. Influenced by low clouds, humidity and aerosols. Maximum visibility is approximately 24 km.</code></pre>
+</div>
+</div>
+<p>Look at all those details and options! It might be overwhelming to us, but ChatGPT has no problem figuring it out.</p>
+<p>If we want to use the <a href="https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0">Pitchfork API</a> to ask questions in a similar fashion, it seems like we might need some documentation for it.</p>
+<p>There’s only one problem: <strong>it’s an unofficial, undocumented API.</strong></p>
+</section>
+<section id="automatic-documentation-generation" class="level1">
+<h1>Automatic documentation generation</h1>
+<p>Luckily for us, APIs aren’t (often) all that complicated. Let’s look at the Pitchfork API’s URL:</p>
+<pre><code>https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0</code></pre>
+<p>After the <code>/search/</code> part, we see a lot of things we can making assumptions about.</p>
+<ul>
+<li><code>size=5</code> probably has to do with how many results are returned. In this case, our search gives us 5 results.</li>
+<li><code>genre=jazz&amp;genre=metal</code> is probably all of the genres of albums to return</li>
+<li><code>rating_from=0.0</code> potentially sets a lower bar for the rating of the album reviews. Pitchfork ranks them 0-10, so this includes all albums.</li>
+<li>There’s also <code>types</code>, <code>sort</code>, <code>start</code>… We can guess about those, too!</li>
+</ul>
+<p>Do we know that our guesses are correct? Absolutely not. But with a little time and some manual labor, we might be able to test our hypotheses about what each parameter actually means!</p>
+<p>But we have neither time or manual labor: we’re playing loose and fast with the truth, we’re moving fast and breaking things, we’re fucking around and hopefully only finding out beautiful, blissful things. Instead, we have AI.</p>
+<p>Let’s just irresponsibly ask ChatGPT to make all of those assumptions for us, and write some nice beautiful documentation just like the OpenMeteo ones!</p>
+<p>Down below we build a prompt that takes an API url and asks ChatGPT to write us “detailed documentation” for the provided URL.</p>
+<div class="cell" data-execution_count="136">
+<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> langchain.prompts <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PromptTemplate</span>
+<span id="cb12-2"></span>
+<span id="cb12-3">prompt <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> PromptTemplate(</span>
+<span id="cb12-4">    input_variables<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"api_url"</span>],</span>
+<span id="cb12-5">    template<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"""Act as a technical writer. Write detailed documentation for the API that exists at </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{api_url}</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">. Only detail the request, do not describe the response. Do not include any parameters not in the sample endpoint."""</span></span>
+<span id="cb12-6">)</span>
+<span id="cb12-7"></span>
+<span id="cb12-8">chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> LLMChain(</span>
+<span id="cb12-9">    llm<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>llm,</span>
+<span id="cb12-10">    verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>,</span>
+<span id="cb12-11">    prompt<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>prompt</span>
+<span id="cb12-12">)</span></code></pre></div>
+</div>
+<p>The code is slightly more complicated than I’d like, as a few weeks ago LangChain decided that chat-based LLMs like GPT-3.5 needed to be talked to with prompts instead of just saying <code>llm.run</code>. I’m sorry it’s a little verbose, but we’ll both survive.</p>
+<p>Notice my extra-stern warning to not provide an example response. While we’re fine with ChatGPT inventing how to use it, we’d rather not have it waste time inventing data that comes back from the API exactly looks like.</p>
+<p>Now we’ll take our Pitchfork API url and feed it into the chain.</p>
+<div class="cell" data-execution_count="137">
+<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1">url <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%20d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">esc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0"</span></span>
+<span id="cb13-2"></span>
+<span id="cb13-3">response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> chain.run(url)</span>
+<span id="cb13-4"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(response)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new LLMChain chain...
+Prompt after formatting:
+Act as a technical writer. Write detailed documentation for the API that exists at https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0. Only detail the request, do not describe the response. Do not include any parameters not in the sample endpoint.
+
+&gt; Finished chain.
+API Documentation
+
+Pitchfork Search API
+
+This API is used to search for reviews on Pitchfork based on specified genres, types, sorting, and size.
+
+Sample Endpoint:
+
+https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0
+
+Request Method: GET
+
+Request Parameters:
+
+• genre: This parameter is used to specify the genre of the review. You can specify multiple genres by adding the parameter multiple times. Possible values are experimental, global, jazz, metal, pop, rap, and rock.
+
+• types: This parameter is used to specify the type of the content you want to retrieve. The possible values are reviews, features, tracks, labels, and artists.
+
+• sort: This parameter is used to specify the sorting order of the content you want to retrieve. The possible values are publishdate desc, publishdate asc, position desc, and position asc. You can specify multiple sorting orders by separating them with commas.
+
+• size: This parameter is used to specify the number of results that you want to retrieve. The possible values are integers between 1 and 100.
+
+• start: This parameter is used to specify the starting position for the search, to retrieve the next "page" of results. The possible values are integers greater than or equal to 0.
+
+• rating_from: This parameter is used to specify the minimum rating for the content you want to retrieve. The possible values are decimal numbers between 0.0 and 10.0.
+
+Response Format:
+
+The response format for this API is in JSON.
+
+Authentication:
+
+No authentication is required to use this API.
+
+Error Codes:
+
+The following response codes may be returned by the API:
+
+• 200 OK: Successful request.
+• 400 Bad Request: Invalid parameters.
+• 401 Unauthorized: Authentication required.
+• 403 Forbidden: Access denied.
+• 404 Not Found: Resource not found.
+• 500 Internal Server Error: Server error.
+
+Limitations:
+
+• This API is subject to rate limiting.
+• The maximum size of a search result is 100.
+• Some parameters may not be compatible with each other - for example, using both sorting and start parameters may lead to unexpected behavior.
+
+Examples:
+
+To retrieve the 5 most recent reviews for the experimental, jazz, and pop genres, the request URL would be:
+
+https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=jazz&amp;genre=pop&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0
+
+To retrieve the top 5 highest-rated metal reviews, the request URL would be:
+
+https://pitchfork.com/api/v2/search/?genre=metal&amp;types=reviews&amp;sort=position%20asc&amp;size=5&amp;start=0&amp;rating_from=8.0
+
+To retrieve the next 5 results from a previous query, the request URL would be:
+
+https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=jazz&amp;genre=pop&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=5&amp;rating_from=0.0</code></pre>
+</div>
+</div>
+<p>That documentation is far nicer than anything I’d personally write!</p>
+<p>Is it all correct? <strong>We have no idea!</strong> But to continue thinking positively: if we found a bug we can always make manual edits.</p>
+<p>Now let’s talk about how we want to use it.</p>
+</section>
+<section id="explicit-documentation" class="level1">
+<h1>Explicit documentation</h1>
+<p>I’m going to call the type of text above <strong>explicit documentation</strong>. It’s “real” documentation, words phrased and formatted in order to communicate specific details about and examples of the API.</p>
+<p>This explicit documentation is just like the OpenMeteo documentation from the LangChain documentation, and we’re going to use it in the exact same way. We’ll make a new <code>APIChain</code>, giving it the language model and the API docs.</p>
+<p>After the chain is made, we’ll ask it our question: it should use the documentation to format a URL, then use the data from the URL to answer the question.</p>
+<div class="cell" data-execution_count="138">
+<div class="sourceCode cell-code" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># Save the response from above as `explicit_docs`, to use later</span></span>
+<span id="cb15-2">explicit_docs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> response</span>
+<span id="cb15-3">explicit_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> APIChain.from_llm_and_api_docs(llm, explicit_docs, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span></code></pre></div>
+</div>
+<div class="cell" data-execution_count="139">
+<div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1">response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> explicit_chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What was the first rap album reviewed by pitchfork?"</span>)</span>
+<span id="cb16-2"><span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(response)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;rating_from=0.0
+{"count":4253,"previous":null,"next":null,"results":{"category":null,"list":[{"tombstone":{"bnm":false,"bnr":false,"albums":[{"id":"5929c3a7eb335119a49ed773","album":{"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"display_name":"Brand New Secondhand","labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"release_year":1999,"photos":{"tout":{"width":150,"height":150,"credit":"","caption":"","altText":"Image may contain: Display, Screen, Electronics, Monitor, Television, and TV","title":"Brand New Secondhand cover art","sizes":{"list":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_160/c23e052b.gif","standard":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_600/c23e052b.gif","homepageSmall":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_55/c23e052b.gif","homepageLarge":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_320/c23e052b.gif"}},"lede":false,"social":false}},"rating":{"display_rating":"9.5","rating":"9.5","bnm":false,"bnr":false},"labels_and_years":[{"labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"year":1999}]}]},"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"channel":"","subChannel":"","position":6,"id":"5929e2b6c0084474cd0c4dc2","url":"/reviews/albums/5099-brand-new-secondhand/","contentType":"albumreview","title":"&lt;em&gt;Brand New Secondhand&lt;/em&gt;","seoTitle":"Brand New Secondhand","socialTitle":"Roots Manuva: Brand New Secondhand","promoTitle":"Brand New Secondhand","authors":[{"id":"592604af17cea934e4daf5f4","name":"Paul Cooper","title":"Contributor","url":"/staff/paul-cooper/","slug":"staff/paul-cooper"}],"pubDate":"1999-03-23T06:00:06.000Z","timestamp":922168806000,"modifiedAt":"2022-03-31T08:47:24.426Z","dek":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","seoDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","promoDescription":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","socialDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","privateTags":["_dj_id:5099","_original_author_id:95"],"tags":[]}]}}
+
+&gt; Finished chain.
+The first rap album reviewed by Pitchfork was "Brand New Secondhand" by Roots Manuva, with a rating of 9.5. The review was published on March 23, 1999.</code></pre>
+</div>
+</div>
+<p>The URL it chose to visit was</p>
+<pre><code>https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;rating_from=0.0</code></pre>
+<p>It adjusted the genre list, the publish date, and decided it only needed a single result! That seems pretty remarkable to me, and the result of an album from 1999 also seems reasonable.</p>
+</section>
+<section id="implicit-documentation" class="level1">
+<h1>Implicit documentation</h1>
+<p>While the explicit documentation above is pretty fantastic, <strong>it also might be a waste of time.</strong> Think about it: if ChatGPT generates a new URL by reading the documentation it created by reading the single URL…</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+  A[URL] --&gt; B[Documentation]
+  B --&gt; C[New URL]
+</pre>
+</div>
+</div>
+</div>
+</div>
+<p>…why can’t we just cut out the middleman? Can’t we just say, “here’s a sample URL, figure out the new one?”</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+  A[URL] -.- B[Documentation]
+  B -.- C[New URL]
+  A ==&gt; C
+</pre>
+</div>
+</div>
+</div>
+</div>
+<p>The documentation isn’t providing anything it doesn’t know already, so it seems reasonable, right? Let’s try it now! Now we’re going to create <strong>implicit docs</strong>, which briefly describe the existence of the API and give a sample endpoint. Instead of all that detail, it’s just the one URL!</p>
+<div class="cell" data-execution_count="140">
+<div class="sourceCode cell-code" id="cb19" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1">implicit_docs <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"""</span></span>
+<span id="cb19-2"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">Pitchfork has an API with a sample endpoint at https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">%20d</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">esc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0</span></span>
+<span id="cb19-3"><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"""</span></span>
+<span id="cb19-4"></span>
+<span id="cb19-5">implicit_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> APIChain.from_llm_and_api_docs(llm, implicit_docs, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">True</span>)</span></code></pre></div>
+</div>
+<p><strong>What are you expecting?</strong> Let’s give it a shot.</p>
+<div class="cell" data-execution_count="141">
+<div class="sourceCode cell-code" id="cb20" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1">implicit_chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What was the first rap album reviewed by pitchfork?"</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;start=0&amp;rating_from=0.0
+{"count":4253,"previous":null,"next":null,"results":{"category":null,"list":[{"tombstone":{"bnm":false,"bnr":false,"albums":[{"id":"5929c3a7eb335119a49ed773","album":{"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"display_name":"Brand New Secondhand","labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"release_year":1999,"photos":{"tout":{"width":150,"height":150,"credit":"","caption":"","altText":"Image may contain: Display, Screen, Electronics, Monitor, Television, and TV","title":"Brand New Secondhand cover art","sizes":{"list":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_160/c23e052b.gif","standard":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_600/c23e052b.gif","homepageSmall":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_55/c23e052b.gif","homepageLarge":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_320/c23e052b.gif"}},"lede":false,"social":false}},"rating":{"display_rating":"9.5","rating":"9.5","bnm":false,"bnr":false},"labels_and_years":[{"labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"year":1999}]}]},"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"channel":"","subChannel":"","position":6,"id":"5929e2b6c0084474cd0c4dc2","url":"/reviews/albums/5099-brand-new-secondhand/","contentType":"albumreview","title":"&lt;em&gt;Brand New Secondhand&lt;/em&gt;","seoTitle":"Brand New Secondhand","socialTitle":"Roots Manuva: Brand New Secondhand","promoTitle":"Brand New Secondhand","authors":[{"id":"592604af17cea934e4daf5f4","name":"Paul Cooper","title":"Contributor","url":"/staff/paul-cooper/","slug":"staff/paul-cooper"}],"pubDate":"1999-03-23T06:00:06.000Z","timestamp":922168806000,"modifiedAt":"2022-03-31T08:47:24.426Z","dek":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","seoDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","promoDescription":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","socialDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","privateTags":["_dj_id:5099","_original_author_id:95"],"tags":[]}]}}
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="141">
+<pre><code>'The first rap album reviewed by Pitchfork was "Brand New Secondhand" by Roots Manuva, published on March 23, 1999, with a rating of 9.5. The API call used to retrieve this information was: https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;start=0&amp;rating_from=0.0.'</code></pre>
+</div>
+</div>
+<p>That’s an A+ perfect response, with a heck of a lot less work.</p>
+</section>
+<section id="summary-and-differences" class="level1">
+<h1>Summary and differences</h1>
+<p>There are two major ways the explicit and implicit approaches differ: success rates and costs.</p>
+<section id="success-rates" class="level2">
+<h2 class="anchored" data-anchor-id="success-rates">Success rates</h2>
+<p>Believe it or not, <strong>the implicit approach has a much higher success rate!</strong></p>
+<p>In writing this piece, I’ve had to tweak the prompt that generates the explicit documentation again and again. ChatGPT seems to go out of its way to lie about the API, and not even in subtle ways:</p>
+<ul>
+<li>It loves to introduce new, non-existent features</li>
+<li>Turn the <code>genre=rap&amp;genre=folk</code> parameter into various flavors of <code>genre=rap,folk</code>, and just generally sacrifices the reality of the API for</li>
+<li>Invent lower and upper bounds for page sizes and ratings</li>
+</ul>
+<p>While these might be good architectural changes or useful new features, they absolutely aren’t implied by the original URL! Without adding a push to be conservative to the prompt, we end up with docs that are completely misleading.</p>
+<p>When you take the misleading documentation and feed it to the <code>APIChain</code> prompt, it winds up screwing up the request a large portion of the time. Overall I’ve found it breaks about a third of the time on the explicitly-documented example!</p>
+<p>On the other hand, explicit documentation allows you to clean up and customize the docs. If you find out the maximum and minimum page size, you’re free to add it! If other genres get released or removed you’re more than welcome to edit the list.</p>
+<p>But if you’re lazy, and just looking for a shortcut? <strong>Implicit docs always peform better</strong>.</p>
+</section>
+<section id="costs" class="level2">
+<h2 class="anchored" data-anchor-id="costs">Costs</h2>
+<p>While we’re all very excited about using the various OpenAI APIs, <strong>they do cost money.</strong> Yes, <code>GPT-3.5-turbo</code> is remarkably inexpensive compared to its peers, but we aren’t here to waste money! If we can keep the prompt smaller our queries cost less, and saving money is the second-quickest route to happiness.</p>
+<p>Let’s use LangChain’s <code>get_openai_callback</code> to examine the token count and cost of our explicit vs implicit requests. Note that we’re using <code>verbose=False</code> here to reduce clutter.</p>
+<div class="cell" data-execution_count="142">
+<div class="sourceCode cell-code" id="cb23" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1">explicit_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> APIChain.from_llm_and_api_docs(llm, explicit_docs, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">False</span>)</span>
+<span id="cb23-2"></span>
+<span id="cb23-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">with</span> get_openai_callback() <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> cb:</span>
+<span id="cb23-4">    response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> explicit_chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What was the first rap album reviewed by pitchfork?"</span>)</span>
+<span id="cb23-5">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Response: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>response<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb23-6">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Total Tokens: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>total_tokens<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb23-7">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Prompt Tokens: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>prompt_tokens<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb23-8">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Completion Tokens: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>completion_tokens<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb23-9">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Total Cost (USD): $</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>total_cost<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Response: The first rap album reviewed by Pitchfork was Roots Manuva's "Brand New Secondhand" released in 1999, with a review published on March 23, 1999, with a rating of 9.5.
+Total Tokens: 3058
+Prompt Tokens: 2970
+Completion Tokens: 88
+Total Cost (USD): $0.006116</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="143">
+<div class="sourceCode cell-code" id="cb25" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1">implicit_chain <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> APIChain.from_llm_and_api_docs(llm, implicit_docs, verbose<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">False</span>)</span>
+<span id="cb25-2"></span>
+<span id="cb25-3"><span class="cf" style="color: #003B4F;
+background-color: null;
+font-style: inherit;">with</span> get_openai_callback() <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> cb:</span>
+<span id="cb25-4">    response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> implicit_chain.run(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"What was the first rap album reviewed by pitchfork?"</span>)</span>
+<span id="cb25-5">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Response: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>response<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb25-6">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Total Tokens: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>total_tokens<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb25-7">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Prompt Tokens: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>prompt_tokens<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb25-8">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Completion Tokens: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>completion_tokens<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb25-9">    <span class="bu" style="color: null;
+background-color: null;
+font-style: inherit;">print</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"Total Cost (USD): $</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>cb<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>total_cost<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Response: The first rap album reviewed by Pitchfork was "Brand New Secondhand" by Roots Manuva, with a rating of 9.5. The review was written by Paul Cooper and was published on March 23, 1999.
+Total Tokens: 1811
+Prompt Tokens: 1722
+Completion Tokens: 89
+Total Cost (USD): $0.0036220000000000002</code></pre>
+</div>
+</div>
+<p>Along with being consistent less correct, <strong>the explicit chain costs around twice as much!</strong> Just above 0.6 cents for explicit compared to <code>0.36</code> for implicit. Depending on how wordy GPT decides to be, some of my tests have seen it up to tree times as much!</p>
+<p>The wildest part about this large difference is that both queries almost always making the <em>same</em> API response, which I assume would take up the bulk of the tokens (secret fact: Pitchfork’s API is so wordy I changed the example to <code>size=5</code> so that it would fit in the GPT-3.5-turbo context window).</p>
+</section>
+<section id="the-takeaway" class="level2">
+<h2 class="anchored" data-anchor-id="the-takeaway">The takeaway</h2>
+<p>Unless you enjoy editing or spending money, it looks like <em>less is more</em>.</p>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <guid>https://jonathansoma.com/words/documenting-apis-gpt-langchain.html</guid>
+  <pubDate>Sun, 09 Apr 2023 04:00:00 GMT</pubDate>
+</item>
 <item>
   <title>Three ways to scrape websites with GPT and custom LangChain tools</title>
   <dc:creator>Jonathan Soma</dc:creator>
@@ -21,70 +765,63 @@
 
 
 <p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
-<section id="scraping-with-gpt-and-custom-langchain-tools" class="level1">
-<h1>Scraping with GPT and custom LangChain tools</h1>
-<section id="introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-openai" class="level2">
-<h2 class="anchored" data-anchor-id="introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-openai">Introducing our old friend BeautifulSoup to our new best pal OpenAI</h2>
-<p>This tutorial is two-in-one: how to build custom tools powered by large language models, along with how to combine a tiny bit of Python scraping abilities with GPT-4’s processing power!</p>
-<p>Using <a href="https://langchain.readthedocs.io/">everyone’s favorite library LangChain</a>, we’ll look at three use cases:</p>
+<section id="introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-chatgpt" class="level1">
+<h1>Introducing our old friend BeautifulSoup to our new best pal ChatGPT</h1>
+<p>This tutorial is two-in-one: how to build <strong>custom LangChain tools</strong> powered by large language models, along with how to combine a tiny bit of <strong>Python scraping</strong> abilities with <strong>GPT-4</strong>’s processing power!</p>
+<p>Using <a href="https://langchain.readthedocs.io/">everyone’s favorite library LangChain</a> and the classic Python scraping library <a href="https://www.crummy.com/software/BeautifulSoup/bs4/doc/">BeautifulSoup</a>, we’ll look at three use cases:</p>
 <ol type="1">
-<li>Extracting one single part of a page</li>
+<li>Extracting one single part of a page to feed ChatGPT information</li>
 <li>Converting a section (or sections) of a page into GPT-parseable data without doing much prep work</li>
-<li>Saving effort and money by pre-processing pages we’re sending to GPT for analysis</li>
+<li>Saving effort and money by pre-processing pages we’re sending to the LLM for analysis</li>
 </ol>
 <p>Along the way you’ll learn how to build custom langchain tools, writng proper descriptions for them and providing the “right” kind of data when they’re done doing their work! By the end we’ll have a fully-functioning scraper that can answer natural-language questions about songs featured in TV shows.</p>
-</section>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
 <p>We’ll start by setting up our API keys to access ChatGPT, along with importing a handful of tools.</p>
-<div class="cell" data-scrolled="true" data-execution_count="105">
+<div class="cell" data-scrolled="true" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%</span>load_ext dotenv</span>
 <span id="cb1-2"><span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">%</span>dotenv</span></code></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>The dotenv extension is already loaded. To reload it, use:
-  %reload_ext dotenv</code></pre>
-</div>
 </div>
 <div class="cell" data-execution_count="106">
-<div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><span class="im" style="color: #00769E;
+<div class="sourceCode cell-code" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">from</span> langchain.agents <span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> initialize_agent, Tool</span>
-<span id="cb3-2"><span class="im" style="color: #00769E;
+<span id="cb2-2"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">from</span> langchain.tools <span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> BaseTool</span>
-<span id="cb3-3"><span class="im" style="color: #00769E;
+<span id="cb2-3"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">from</span> langchain.chat_models <span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> ChatOpenAI</span>
-<span id="cb3-4"><span class="im" style="color: #00769E;
+<span id="cb2-4"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">from</span> langchain.agents <span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> tool</span>
-<span id="cb3-5"><span class="im" style="color: #00769E;
+<span id="cb2-5"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> requests</span>
-<span id="cb3-6"><span class="im" style="color: #00769E;
+<span id="cb2-6"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">from</span> bs4 <span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> BeautifulSoup</span>
-<span id="cb3-7"><span class="im" style="color: #00769E;
+<span id="cb2-7"><span class="im" style="color: #00769E;
 background-color: null;
 font-style: inherit;">import</span> json</span></code></pre></div>
 </div>
 <p>For this use case we’re going to use GPT-4, as opposed to GPT-3.5-turbo (which is much cheaper). I’ve found GPT-4 is a <em>lot</em> better at understanding fragmented HTML, and we do some Python/HTML cross-pollination later on in this project which requres all the brainpower GPT can muster.</p>
 <div class="cell" data-execution_count="88">
-<div class="sourceCode cell-code" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1">llm <span class="op" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1">llm <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> ChatOpenAI(model<span class="op" style="color: #5E5E5E;
 background-color: null;
@@ -110,15 +847,15 @@ font-style: inherit;">0</span>)</span></code></pre></div>
 </div>
 <p>The results page provides a list of shows. We pull out the frst match – where <code>class</code> is <code>tf-promo-tile</code> – and send back both the URL to the show as well as the show name.</p>
 <p>If we did this manually, it might look like the code below.</p>
-<div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Build the URL</span></span>
-<span id="cb5-2">query <span class="op" style="color: #5E5E5E;
+<span id="cb4-2">query <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"grey's anatomy"</span></span>
-<span id="cb5-3">url <span class="op" style="color: #5E5E5E;
+<span id="cb4-3">url <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="ss" style="color: #20794D;
 background-color: null;
@@ -129,39 +866,39 @@ background-color: null;
 font-style: inherit;">}</span><span class="ss" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span></span>
-<span id="cb5-4"></span>
-<span id="cb5-5"><span class="co" style="color: #5E5E5E;
+<span id="cb4-4"></span>
+<span id="cb4-5"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Make the request</span></span>
-<span id="cb5-6">headers <span class="op" style="color: #5E5E5E;
+<span id="cb4-6">headers <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> { <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'User-Agent'</span>: <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb5-7">response <span class="op" style="color: #5E5E5E;
+<span id="cb4-7">response <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> requests.get(url, headers<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span>headers)</span>
-<span id="cb5-8"></span>
-<span id="cb5-9"><span class="co" style="color: #5E5E5E;
+<span id="cb4-8"></span>
+<span id="cb4-9"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Extract the link</span></span>
-<span id="cb5-10">soup <span class="op" style="color: #5E5E5E;
+<span id="cb4-10">soup <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> BeautifulSoup(response.text)</span>
-<span id="cb5-11">link <span class="op" style="color: #5E5E5E;
+<span id="cb4-11">link <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select_one(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">".tf-promo-tile"</span>)</span>
-<span id="cb5-12"></span>
-<span id="cb5-13"><span class="co" style="color: #5E5E5E;
+<span id="cb4-12"></span>
+<span id="cb4-13"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Save the URL and name</span></span>
-<span id="cb5-14">url <span class="op" style="color: #5E5E5E;
+<span id="cb4-14">url <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="ss" style="color: #20794D;
 background-color: null;
@@ -174,7 +911,7 @@ background-color: null;
 font-style: inherit;">}</span><span class="ss" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span></span>
-<span id="cb5-15">name <span class="op" style="color: #5E5E5E;
+<span id="cb4-15">name <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> link[<span class="st" style="color: #20794D;
 background-color: null;
@@ -186,10 +923,10 @@ font-style: inherit;">'title'</span>]</span></code></pre></div>
 </ul>
 <p>A simple version might look something like the code below. You provide a <code>query</code> and get back a sentence with the name and URL.</p>
 <div class="cell" data-execution_count="89">
-<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><span class="at" style="color: #657422;
+<div class="sourceCode cell-code" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">@tool</span></span>
-<span id="cb6-2"><span class="kw" style="color: #003B4F;
+<span id="cb5-2"><span class="kw" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">def</span> tunefind_search(query: <span class="bu" style="color: null;
 background-color: null;
@@ -198,17 +935,17 @@ background-color: null;
 font-style: inherit;">-&gt;</span> <span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">str</span>:</span>
-<span id="cb6-3">    <span class="co" style="color: #5E5E5E;
+<span id="cb5-3">    <span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">"""Searches Tunefind for a given TV show. Required to find the base URL for</span></span>
-<span id="cb6-4"><span class="co" style="color: #5E5E5E;
+<span id="cb5-4"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    a given show so you can find its seasons, episodes or songs.</span></span>
-<span id="cb6-5"><span class="co" style="color: #5E5E5E;
+<span id="cb5-5"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    The input to this tool should be the show we're searching for."""</span></span>
-<span id="cb6-6"></span>
-<span id="cb6-7">    url <span class="op" style="color: #5E5E5E;
+<span id="cb5-6"></span>
+<span id="cb5-7">    url <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="ss" style="color: #20794D;
 background-color: null;
@@ -219,29 +956,29 @@ background-color: null;
 font-style: inherit;">}</span><span class="ss" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span></span>
-<span id="cb6-8">    headers <span class="op" style="color: #5E5E5E;
+<span id="cb5-8">    headers <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> { <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'User-Agent'</span>: <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb6-9">    response <span class="op" style="color: #5E5E5E;
+<span id="cb5-9">    response <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> requests.get(url, headers<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span>headers)</span>
-<span id="cb6-10"></span>
-<span id="cb6-11">    soup <span class="op" style="color: #5E5E5E;
+<span id="cb5-10"></span>
+<span id="cb5-11">    soup <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> BeautifulSoup(response.text)</span>
-<span id="cb6-12"></span>
-<span id="cb6-13">    link <span class="op" style="color: #5E5E5E;
+<span id="cb5-12"></span>
+<span id="cb5-13">    link <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select_one(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">".tf-promo-tile"</span>)</span>
-<span id="cb6-14">    url <span class="op" style="color: #5E5E5E;
+<span id="cb5-14">    url <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="ss" style="color: #20794D;
 background-color: null;
@@ -254,13 +991,13 @@ background-color: null;
 font-style: inherit;">}</span><span class="ss" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span></span>
-<span id="cb6-15">    name <span class="op" style="color: #5E5E5E;
+<span id="cb5-15">    name <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> link[<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'title'</span>]</span>
-<span id="cb6-16"></span>
-<span id="cb6-17">    <span class="cf" style="color: #003B4F;
+<span id="cb5-16"></span>
+<span id="cb5-17">    <span class="cf" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">return</span> <span class="ss" style="color: #20794D;
 background-color: null;
@@ -278,15 +1015,15 @@ font-style: inherit;">}</span><span class="ss" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"</span></span></code></pre></div>
 </div>
-<p>To allow Langchan – and us! – to use this new search tool, we’ll create an agent that has access to it. When there’s a question that might be answered by our new tool (based on the tool description), the agent will run off and try to use it.</p>
+<p>To allow LangChain – and us! – to use this new search tool, we’ll create an agent that has access to it. When there’s a question that might be answered by our new tool (based on the tool description), the agent will run off and try to use it.</p>
 <div class="cell" data-execution_count="90">
-<div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Create a tool-using agent</span></span>
-<span id="cb7-2">tools <span class="op" style="color: #5E5E5E;
+<span id="cb6-2">tools <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> [tunefind_search]</span>
-<span id="cb7-3">agent <span class="op" style="color: #5E5E5E;
+<span id="cb6-3">agent <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> initialize_agent(tools, llm, agent<span class="op" style="color: #5E5E5E;
 background-color: null;
@@ -300,16 +1037,16 @@ font-style: inherit;">True</span>)</span></code></pre></div>
 </div>
 <p>Using this setup is as simple as <code>agent.run</code> with our question. Between the knowledge that the GPT already has and the ability to use the tool, it will try to answer our question!</p>
 <div class="cell" data-execution_count="91">
-<div class="sourceCode cell-code" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Get the results</span></span>
-<span id="cb8-2">result <span class="op" style="color: #5E5E5E;
+<span id="cb7-2">result <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> agent.run(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"What's the Tunefind URL for Grey's Anatomy?"</span>)</span>
-<span id="cb8-3"></span>
-<span id="cb8-4"><span class="bu" style="color: null;
+<span id="cb7-3"></span>
+<span id="cb7-4"><span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">print</span>(result)</span></code></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -361,39 +1098,39 @@ The Tunefind URL for Grey's Anatomy is https://www.tunefind.com/show/greys-anato
 <p>We don’t need to do anything that would qualify as complicated scraping: no loops, nothing nested, no <code>try</code>/<code>pass</code> statements. Just “hey, take this data!”</p>
 <p>Before it goes into a LangChain tool, the code might look like the code below.</p>
 <div class="cell" data-execution_count="92">
-<div class="sourceCode cell-code" id="cb10" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Build the URL and make the request</span></span>
-<span id="cb10-2">url <span class="op" style="color: #5E5E5E;
+<span id="cb9-2">url <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"https://www.tunefind.com/show/greys-anatomy"</span></span>
-<span id="cb10-3">headers <span class="op" style="color: #5E5E5E;
+<span id="cb9-3">headers <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> {<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'User-Agent'</span>: <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span>}</span>
-<span id="cb10-4">response <span class="op" style="color: #5E5E5E;
+<span id="cb9-4">response <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> requests.get(url, headers<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span>headers)</span>
-<span id="cb10-5"></span>
-<span id="cb10-6"><span class="co" style="color: #5E5E5E;
+<span id="cb9-5"></span>
+<span id="cb9-6"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Grab all of the elements with a class that includes with "EpisodeListItem_title"</span></span>
-<span id="cb10-7">soup <span class="op" style="color: #5E5E5E;
+<span id="cb9-7">soup <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> BeautifulSoup(response.text)</span>
-<span id="cb10-8">elements <span class="op" style="color: #5E5E5E;
+<span id="cb9-8">elements <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"[class*='EpisodeListItem_title']"</span>)</span>
-<span id="cb10-9"><span class="bu" style="color: null;
+<span id="cb9-9"><span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">str</span>(elements)</span></code></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="92">
@@ -411,10 +1148,10 @@ For example, if the show A Million Little Things is at https://www.tunefind.com/
 Season 3 of A Million Little Things could be found at https://www.tunefind.com/show/a-million-little-things/season-3</code></pre>
 <p>The important thing to note is that even though our last tool only found the show URL at <code>https://www.tunefind.com/show/greys-anatomy</code>, ChatGPT is smart enough to add <code>/season-1</code> on it if it knows we’re looking for season 1.</p>
 <div class="cell" data-execution_count="95">
-<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><span class="at" style="color: #657422;
+<div class="sourceCode cell-code" id="cb12" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">@tool</span></span>
-<span id="cb13-2"><span class="kw" style="color: #003B4F;
+<span id="cb12-2"><span class="kw" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">def</span> get_shows_from_season(url: <span class="bu" style="color: null;
 background-color: null;
@@ -423,49 +1160,49 @@ background-color: null;
 font-style: inherit;">-&gt;</span> <span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">str</span>:</span>
-<span id="cb13-3">    <span class="co" style="color: #5E5E5E;
+<span id="cb12-3">    <span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">"""Queries Tunefind for the episode list from a given season, given the URL of the season.</span></span>
-<span id="cb13-4"><span class="co" style="color: #5E5E5E;
+<span id="cb12-4"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    The input to this tool should be a URL to that season.</span></span>
-<span id="cb13-5"></span>
-<span id="cb13-6"><span class="co" style="color: #5E5E5E;
+<span id="cb12-5"></span>
+<span id="cb12-6"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    Season URLs are formed by takng the show's Tunefind URL and adding /season-NUM after it.</span></span>
-<span id="cb13-7"><span class="co" style="color: #5E5E5E;
+<span id="cb12-7"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    For example, if a show's URL is https://www.tunefind.com/show/a-million-little-things/</span></span>
-<span id="cb13-8"><span class="co" style="color: #5E5E5E;
+<span id="cb12-8"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    you can find episode links for season 3 at https://www.tunefind.com/show/a-million-little-things/season-3</span></span>
-<span id="cb13-9"><span class="co" style="color: #5E5E5E;
+<span id="cb12-9"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    """</span></span>
-<span id="cb13-10">    </span>
-<span id="cb13-11">    headers <span class="op" style="color: #5E5E5E;
+<span id="cb12-10">    </span>
+<span id="cb12-11">    headers <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> { <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'User-Agent'</span>: <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb13-12">    response <span class="op" style="color: #5E5E5E;
+<span id="cb12-12">    response <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> requests.get(url, headers<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span>headers)</span>
-<span id="cb13-13"></span>
-<span id="cb13-14">    soup <span class="op" style="color: #5E5E5E;
+<span id="cb12-13"></span>
+<span id="cb12-14">    soup <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> BeautifulSoup(response.text)</span>
-<span id="cb13-15">    elements <span class="op" style="color: #5E5E5E;
+<span id="cb12-15">    elements <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"[class*='EpisodeListItem_title']"</span>)</span>
-<span id="cb13-16"></span>
-<span id="cb13-17">    <span class="cf" style="color: #003B4F;
+<span id="cb12-16"></span>
+<span id="cb12-17">    <span class="cf" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">return</span> <span class="bu" style="color: null;
 background-color: null;
@@ -474,13 +1211,13 @@ font-style: inherit;">str</span>(elements)</span></code></pre></div>
 <p>Now that we’ve built it, it’s time to <strong>use our new tool.</strong></p>
 <p>Same process as before, but this time our agent has access to two tools: the tool that can find the show page, and the tool that can pull the episode lists from the episode page.</p>
 <div class="cell" data-execution_count="96">
-<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb13" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Create a tool-using agent</span></span>
-<span id="cb14-2">tools <span class="op" style="color: #5E5E5E;
+<span id="cb13-2">tools <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> [tunefind_search, get_shows_from_season]</span>
-<span id="cb14-3">agent <span class="op" style="color: #5E5E5E;
+<span id="cb13-3">agent <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> initialize_agent(tools, llm, agent<span class="op" style="color: #5E5E5E;
 background-color: null;
@@ -493,13 +1230,13 @@ background-color: null;
 font-style: inherit;">True</span>)</span></code></pre></div>
 </div>
 <div class="cell" data-execution_count="97">
-<div class="sourceCode cell-code" id="cb15" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1">result <span class="op" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb14" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1">result <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> agent.run(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"What is the name and URL for episode 8 season 3 for Grey's Anatomy?"</span>)</span>
-<span id="cb15-2"></span>
-<span id="cb15-3"><span class="bu" style="color: null;
+<span id="cb14-2"></span>
+<span id="cb14-3"><span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">print</span>(result)</span></code></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -548,44 +1285,44 @@ The name of episode 8 for season 3 of Grey's Anatomy is "Staring at the Sun" and
 <p>Here’s the thing: <em>I don’t want to send all that to ChatGPT</em>. I’m remarkably frugal, and while it’s great to be lazy and send everything to GPT, <strong>being lazy while using ChatGPT’s API incurs direct financial consequences.</strong> By reducing the data we send to GPT we get charged less, and that makes my wallet very very happy!</p>
 <p>In this case we’re going to write a whole scraper for the page! When given a URL, we’ll give back a list of artists and song titles.</p>
 <div class="cell" data-execution_count="98">
-<div class="sourceCode cell-code" id="cb17" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb16" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Get the page</span></span>
-<span id="cb17-2">url <span class="op" style="color: #5E5E5E;
+<span id="cb16-2">url <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"https://www.tunefind.com/show/greys-anatomy/season-1/240"</span></span>
-<span id="cb17-3">headers <span class="op" style="color: #5E5E5E;
+<span id="cb16-3">headers <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> { <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'User-Agent'</span>: <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb17-4">response <span class="op" style="color: #5E5E5E;
+<span id="cb16-4">response <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> requests.get(url, headers<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span>headers)</span>
-<span id="cb17-5"></span>
-<span id="cb17-6"><span class="co" style="color: #5E5E5E;
+<span id="cb16-5"></span>
+<span id="cb16-6"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Scrape the content</span></span>
-<span id="cb17-7">soup <span class="op" style="color: #5E5E5E;
+<span id="cb16-7">soup <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> BeautifulSoup(response.text)</span>
-<span id="cb17-8">titles <span class="op" style="color: #5E5E5E;
+<span id="cb16-8">titles <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"[class^='SongTitle']"</span>)</span>
-<span id="cb17-9">artists <span class="op" style="color: #5E5E5E;
+<span id="cb16-9">artists <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"[class^='ArtistSub']"</span>)</span>
-<span id="cb17-10">results <span class="op" style="color: #5E5E5E;
+<span id="cb16-10">results <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> [{<span class="st" style="color: #20794D;
 background-color: null;
@@ -598,11 +1335,11 @@ background-color: null;
 font-style: inherit;">in</span> (<span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">zip</span>(titles, artists))]</span>
-<span id="cb17-11"></span>
-<span id="cb17-12"><span class="co" style="color: #5E5E5E;
+<span id="cb16-11"></span>
+<span id="cb16-12"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Turn into a JSON string</span></span>
-<span id="cb17-13">json.dumps(results)</span></code></pre></div>
+<span id="cb16-13">json.dumps(results)</span></code></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="98">
 <pre><code>'[{"artist": "The Ditty Bops", "title": "There\'s a Girl"}, {"artist": "Tegan and Sara", "title": "There\'s a Girl"}, {"artist": "The Ditty Bops", "title": "I Won\'t Be Left"}, {"artist": "stuart reid", "title": "I Won\'t Be Left"}, {"artist": "Reindeer Section", "title": "Wishful Thinking"}, {"artist": "Lisa Loeb", "title": "Wishful Thinking"}, {"artist": "Psapp", "title": "Hear You Breathing"}, {"artist": "Rilo Kiley", "title": "Hear You Breathing"}, {"artist": "Keane", "title": "You Are My Joy"}, {"artist": "Interpol", "title": "You Are My Joy"}, {"artist": "Psapp", "title": "Fools Like Me"}, {"artist": "Tegan and Sara", "title": "Fools Like Me"}]'</code></pre>
 </div>
@@ -611,10 +1348,10 @@ font-style: inherit;"># Turn into a JSON string</span></span>
 <p>One important thing to note is that <strong>we’re usng <code>json.dumps</code></strong> , which converts the Python object – a list of dictionaries that include artists and titles – into the string representation. We need to do this because every LangChain tool must return a string: that’s what language models understand, so that’s what we send. It looks exactly the same, but without the <code>json.dumps</code> it just won’t work.</p>
 <p>Now let’s apply this as our tool.</p>
 <div class="cell" data-execution_count="102">
-<div class="sourceCode cell-code" id="cb19" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><span class="at" style="color: #657422;
+<div class="sourceCode cell-code" id="cb18" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><span class="at" style="color: #657422;
 background-color: null;
 font-style: inherit;">@tool</span></span>
-<span id="cb19-2"><span class="kw" style="color: #003B4F;
+<span id="cb18-2"><span class="kw" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">def</span> get_songs_from_episode(url: <span class="bu" style="color: null;
 background-color: null;
@@ -623,50 +1360,50 @@ background-color: null;
 font-style: inherit;">-&gt;</span> <span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">str</span>:</span>
-<span id="cb19-3">    <span class="co" style="color: #5E5E5E;
+<span id="cb18-3">    <span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">"""Queries Tunefind for the songs for the specific episode of a show.</span></span>
-<span id="cb19-4"><span class="co" style="color: #5E5E5E;
+<span id="cb18-4"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    The input to this tool should be the URL to an episode.</span></span>
-<span id="cb19-5"><span class="co" style="color: #5E5E5E;
+<span id="cb18-5"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    The URL will look like https://www.tunefind.com/show/greys-anatomy/season-6/4120</span></span>
-<span id="cb19-6"><span class="co" style="color: #5E5E5E;
+<span id="cb18-6"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    You must visit the season page to obtain an episode URL</span></span>
-<span id="cb19-7"><span class="co" style="color: #5E5E5E;
+<span id="cb18-7"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">    """</span></span>
-<span id="cb19-8"></span>
-<span id="cb19-9">    headers <span class="op" style="color: #5E5E5E;
+<span id="cb18-8"></span>
+<span id="cb18-9">    headers <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> { <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'User-Agent'</span>: <span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb19-10">    response <span class="op" style="color: #5E5E5E;
+<span id="cb18-10">    response <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> requests.get(url, headers<span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span>headers)</span>
-<span id="cb19-11"></span>
-<span id="cb19-12">    soup <span class="op" style="color: #5E5E5E;
+<span id="cb18-11"></span>
+<span id="cb18-12">    soup <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> BeautifulSoup(response.text)</span>
-<span id="cb19-13"></span>
-<span id="cb19-14">    titles <span class="op" style="color: #5E5E5E;
+<span id="cb18-13"></span>
+<span id="cb18-14">    titles <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"[class^='SongTitle']"</span>)</span>
-<span id="cb19-15">    artists <span class="op" style="color: #5E5E5E;
+<span id="cb18-15">    artists <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> soup.select(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"[class^='ArtistSub']"</span>)</span>
-<span id="cb19-16">    results <span class="op" style="color: #5E5E5E;
+<span id="cb18-16">    results <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> [{<span class="st" style="color: #20794D;
 background-color: null;
@@ -679,21 +1416,21 @@ background-color: null;
 font-style: inherit;">in</span> (<span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">zip</span>(titles, artists))]</span>
-<span id="cb19-17"></span>
-<span id="cb19-18">    <span class="cf" style="color: #003B4F;
+<span id="cb18-17"></span>
+<span id="cb18-18">    <span class="cf" style="color: #003B4F;
 background-color: null;
 font-style: inherit;">return</span> json.dumps(results)</span></code></pre></div>
 </div>
 <p>Notice the grumpy demand: <code>You must visit the season page to obtain an episode URL</code>. Just like ChatGPT likes to hallucinate journalism stories and academic papers, it loves to think it knows an episode URL just by guessing a number after the season. That sentence is enough to keep it in line.</p>
 <p>Finally, <strong>we’ll string all three tools together</strong>. The show search, the episode lister, and the song lister.</p>
 <div class="cell" data-execution_count="103">
-<div class="sourceCode cell-code" id="cb20" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><span class="co" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb19" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><span class="co" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;"># Buld the agent using all three tools</span></span>
-<span id="cb20-2">tools <span class="op" style="color: #5E5E5E;
+<span id="cb19-2">tools <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> [tunefind_search, get_shows_from_season, get_songs_from_episode]</span>
-<span id="cb20-3">agent <span class="op" style="color: #5E5E5E;
+<span id="cb19-3">agent <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> initialize_agent(tools, llm, agent<span class="op" style="color: #5E5E5E;
 background-color: null;
@@ -707,12 +1444,12 @@ font-style: inherit;">True</span>)</span></code></pre></div>
 </div>
 <p>And now, the moment of truth!</p>
 <div class="cell" data-execution_count="104">
-<div class="sourceCode cell-code" id="cb21" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1">result <span class="op" style="color: #5E5E5E;
+<div class="sourceCode cell-code" id="cb20" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1">result <span class="op" style="color: #5E5E5E;
 background-color: null;
 font-style: inherit;">=</span> agent.run(<span class="st" style="color: #20794D;
 background-color: null;
 font-style: inherit;">"What was the song by Lisa Loeb on Grey's Anatomy season 1 episode 3?"</span>)</span>
-<span id="cb21-2"><span class="bu" style="color: null;
+<span id="cb20-2"><span class="bu" style="color: null;
 background-color: null;
 font-style: inherit;">print</span>(result)</span></code></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -758,7 +1495,7 @@ The song by Lisa Loeb in Grey's Anatomy season 1 episode 3 is "Wishful Thinking"
 <section id="final-thoughts" class="level2">
 <h2 class="anchored" data-anchor-id="final-thoughts">Final thoughts</h2>
 <p>LangChain tools are great! While there are certainly other approaches to what we did above – external requests plugins, for example – combinng a small amount of manual scraping while letting GPT handle the details is a good combination of convenient and cost-effectve. Instead of sending all of the HTML (too big, too expensive) or just sending the text (too unpredictable, also potentially too large), carving out the bits you’re actually interested in can do a lot for a tiny project.</p>
-<p>Combine this with something like <a href="https://github.com/eyurtsev/kor">kor</a> and your life is pretty much perfect.</p>
+<p>Combine this with something like <a href="https://github.com/eyurtsev/kor">kor</a> or <a href="https://shreyar.github.io/guardrails/">guardrails</a> and your life is pretty much perfect.</p>
 
 
 </section>

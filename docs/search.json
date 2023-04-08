@@ -84,6 +84,41 @@
     "text": "%load_ext dotenv\n%dotenv\n\n\nfrom langchain.agents import initialize_agent, Tool\nfrom langchain.tools import BaseTool\nfrom langchain.chat_models import ChatOpenAI\nfrom langchain.agents import tool\nimport requests\nfrom bs4 import BeautifulSoup\nimport json\n\nfrom langchain import LLMChain\n\n\nllm = ChatOpenAI(model='gpt-3.5-turbo', temperature=0)\n\n\nfrom langchain.prompts import PromptTemplate\n\nprompt = PromptTemplate(\n    input_variables=[\"api_url\"],\n    template=\"Write documentation for the API endpoint: {api_url}\",\n)\n\n\nfrom langchain.prompts import HumanMessagePromptTemplate\n\nprompt = HumanMessagePromptTemplate.from_template(\"{text}\")\n\nchain = LLMChain(\n    llm=llm,\n    verbose=True,\n    prompt=prompt\n)\n\n\nfrom langchain.chat_models import ChatOpenAI\nfrom langchain.llms import OpenAI\nfrom langchain.agents import load_tools, initialize_agent\nimport sys\n\n\nllm = ChatOpenAI(model='gpt-3.5-turbo', temperature=0)\n\n\ntools = load_tools(\n    [\"human\"], \n    llm=llm,\n)\n\n\n# agent_chain = initialize_agent(\n#     tools,\n#     llm,\n#     agent=\"chat-zero-shot-react-description\",\n#     verbose=True,\n# )\n\nagent = initialize_agent(tools, llm, agent=\"chat-zero-shot-react-description\", verbose=True)\n\n\nimport sys\nfrom langchain.chat_models import ChatOpenAI\nfrom langchain.llms import OpenAI\nfrom langchain.agents import load_tools, initialize_agent\n\nllm = ChatOpenAI(temperature=0.0)\nmath_llm = OpenAI(temperature=0.0)\ntools = load_tools(\n    [\"llm-math\"], \n    llm=math_llm,\n)\n\nagent_chain = initialize_agent(\n    tools,\n    llm,\n    agent=\"chat-zero-shot-react-description\",\n    verbose=True,\n)\n\n\n\n\nKeyError: 'tools'"
   },
   {
+    "objectID": "documenting-apis-gpt-langchain.html",
+    "href": "documenting-apis-gpt-langchain.html",
+    "title": "Exploring and explaining undocumented APIs with ChatGPT and LangChain",
+    "section": "",
+    "text": "Hi, I’m Soma! You can find me on email at jonathan.soma@gmail.com, on Twitter at @dangerscarf, or maybe even on this newsletter I’ve never sent."
+  },
+  {
+    "objectID": "documenting-apis-gpt-langchain.html#setup",
+    "href": "documenting-apis-gpt-langchain.html#setup",
+    "title": "Exploring and explaining undocumented APIs with ChatGPT and LangChain",
+    "section": "Setup",
+    "text": "Setup\nGive me one moment to set things up! First we’ll pull in all of our API keys using python-dotenv, then we’ll use a thousand and one imports to bring in LangChain and friends.\n\n%load_ext dotenv\n%dotenv\n\n\n# LangChain imports\nfrom langchain.agents import initialize_agent\nfrom langchain.chat_models import ChatOpenAI\nfrom langchain.chains import APIChain\nfrom langchain.prompts.prompt import PromptTemplate\nfrom langchain.callbacks import get_openai_callback\nfrom langchain import LLMChain\n\n# Normal human imports\nimport requests\nfrom bs4 import BeautifulSoup\nimport json\n\nEven though GPT-4 is out, we’ll be using GPT-3.5-turbo for this one. At the moment it’s infinitely cheaper, and every penny matters!\n\nllm = ChatOpenAI(model='gpt-3.5-turbo', temperature=0)"
+  },
+  {
+    "objectID": "documenting-apis-gpt-langchain.html#success-rates",
+    "href": "documenting-apis-gpt-langchain.html#success-rates",
+    "title": "Exploring and explaining undocumented APIs with ChatGPT and LangChain",
+    "section": "Success rates",
+    "text": "Success rates\nBelieve it or not, the implicit approach has a much higher success rate!\nIn writing this piece, I’ve had to tweak the prompt that generates the explicit documentation again and again. ChatGPT seems to go out of its way to lie about the API, and not even in subtle ways:\n\nIt loves to introduce new, non-existent features\nTurn the genre=rap&genre=folk parameter into various flavors of genre=rap,folk, and just generally sacrifices the reality of the API for\nInvent lower and upper bounds for page sizes and ratings\n\nWhile these might be good architectural changes or useful new features, they absolutely aren’t implied by the original URL! Without adding a push to be conservative to the prompt, we end up with docs that are completely misleading.\nWhen you take the misleading documentation and feed it to the APIChain prompt, it winds up screwing up the request a large portion of the time. Overall I’ve found it breaks about a third of the time on the explicitly-documented example!\nOn the other hand, explicit documentation allows you to clean up and customize the docs. If you find out the maximum and minimum page size, you’re free to add it! If other genres get released or removed you’re more than welcome to edit the list.\nBut if you’re lazy, and just looking for a shortcut? Implicit docs always peform better."
+  },
+  {
+    "objectID": "documenting-apis-gpt-langchain.html#costs",
+    "href": "documenting-apis-gpt-langchain.html#costs",
+    "title": "Exploring and explaining undocumented APIs with ChatGPT and LangChain",
+    "section": "Costs",
+    "text": "Costs\nWhile we’re all very excited about using the various OpenAI APIs, they do cost money. Yes, GPT-3.5-turbo is remarkably inexpensive compared to its peers, but we aren’t here to waste money! If we can keep the prompt smaller our queries cost less, and saving money is the second-quickest route to happiness.\nLet’s use LangChain’s get_openai_callback to examine the token count and cost of our explicit vs implicit requests. Note that we’re using verbose=False here to reduce clutter.\n\nexplicit_chain = APIChain.from_llm_and_api_docs(llm, explicit_docs, verbose=False)\n\nwith get_openai_callback() as cb:\n    response = explicit_chain.run(\"What was the first rap album reviewed by pitchfork?\")\n    print(f\"Response: {response}\")\n    print(f\"Total Tokens: {cb.total_tokens}\")\n    print(f\"Prompt Tokens: {cb.prompt_tokens}\")\n    print(f\"Completion Tokens: {cb.completion_tokens}\")\n    print(f\"Total Cost (USD): ${cb.total_cost}\")\n\nResponse: The first rap album reviewed by Pitchfork was Roots Manuva's \"Brand New Secondhand\" released in 1999, with a review published on March 23, 1999, with a rating of 9.5.\nTotal Tokens: 3058\nPrompt Tokens: 2970\nCompletion Tokens: 88\nTotal Cost (USD): $0.006116\n\n\n\nimplicit_chain = APIChain.from_llm_and_api_docs(llm, implicit_docs, verbose=False)\n\nwith get_openai_callback() as cb:\n    response = implicit_chain.run(\"What was the first rap album reviewed by pitchfork?\")\n    print(f\"Response: {response}\")\n    print(f\"Total Tokens: {cb.total_tokens}\")\n    print(f\"Prompt Tokens: {cb.prompt_tokens}\")\n    print(f\"Completion Tokens: {cb.completion_tokens}\")\n    print(f\"Total Cost (USD): ${cb.total_cost}\")\n\nResponse: The first rap album reviewed by Pitchfork was \"Brand New Secondhand\" by Roots Manuva, with a rating of 9.5. The review was written by Paul Cooper and was published on March 23, 1999.\nTotal Tokens: 1811\nPrompt Tokens: 1722\nCompletion Tokens: 89\nTotal Cost (USD): $0.0036220000000000002\n\n\nAlong with being consistent less correct, the explicit chain costs around twice as much! Just above 0.6 cents for explicit compared to 0.36 for implicit. Depending on how wordy GPT decides to be, some of my tests have seen it up to tree times as much!\nThe wildest part about this large difference is that both queries almost always making the same API response, which I assume would take up the bulk of the tokens (secret fact: Pitchfork’s API is so wordy I changed the example to size=5 so that it would fit in the GPT-3.5-turbo context window)."
+  },
+  {
+    "objectID": "documenting-apis-gpt-langchain.html#the-takeaway",
+    "href": "documenting-apis-gpt-langchain.html#the-takeaway",
+    "title": "Exploring and explaining undocumented APIs with ChatGPT and LangChain",
+    "section": "The takeaway",
+    "text": "The takeaway\nUnless you enjoy editing or spending money, it looks like less is more."
+  },
+  {
     "objectID": "multi-language-qa-gpt.html",
     "href": "multi-language-qa-gpt.html",
     "title": "Multi-language document Q&A with LangChain and GPT-3.5-turbo",
@@ -158,7 +193,7 @@
     "href": "index.html",
     "title": "An awful default creation of Jonathan Soma",
     "section": "",
-    "text": "Order By\n       Default\n         \n          Date - Oldest\n        \n         \n          Date - Newest\n        \n         \n          Title\n        \n         \n          Author\n        \n     \n  \n    \n      \n      \n    \n\n\n\n\n\n\nDate\n\n\nTitle\n\n\nAuthor\n\n\n\n\n\n\nApr 8, 2023\n\n\nThree ways to scrape websites with GPT and custom LangChain tools\n\n\nJonathan Soma\n\n\n\n\nMar 27, 2023\n\n\nBuilding Spotify playlists based on vibes using LangChain and GPT\n\n\nJonathan Soma\n\n\n\n\nMar 18, 2023\n\n\nMulti-language document Q&A with LangChain and GPT-3.5-turbo\n\n\nJonathan Soma\n\n\n\n\n\n\nNo matching items"
+    "text": "Order By\n       Default\n         \n          Date - Oldest\n        \n         \n          Date - Newest\n        \n         \n          Title\n        \n         \n          Author\n        \n     \n  \n    \n      \n      \n    \n\n\n\n\n\n\nDate\n\n\nTitle\n\n\nAuthor\n\n\n\n\n\n\nApr 9, 2023\n\n\nExploring and explaining undocumented APIs with ChatGPT and LangChain\n\n\nJonathan Soma\n\n\n\n\nApr 8, 2023\n\n\nThree ways to scrape websites with GPT and custom LangChain tools\n\n\nJonathan Soma\n\n\n\n\nMar 27, 2023\n\n\nBuilding Spotify playlists based on vibes using LangChain and GPT\n\n\nJonathan Soma\n\n\n\n\nMar 18, 2023\n\n\nMulti-language document Q&A with LangChain and GPT-3.5-turbo\n\n\nJonathan Soma\n\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "three-ways-to-scrape-langchain.html",
@@ -168,24 +203,17 @@
     "text": "Hi, I’m Soma! You can find me on email at jonathan.soma@gmail.com, on Twitter at @dangerscarf, or maybe even on this newsletter I’ve never sent."
   },
   {
-    "objectID": "three-ways-to-scrape-langchain.html#introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-openai",
-    "href": "three-ways-to-scrape-langchain.html#introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-openai",
-    "title": "Three ways to scrape websites with GPT and custom LangChain tools",
-    "section": "Introducing our old friend BeautifulSoup to our new best pal OpenAI",
-    "text": "Introducing our old friend BeautifulSoup to our new best pal OpenAI\nThis tutorial is two-in-one: how to build custom tools powered by large language models, along with how to combine a tiny bit of Python scraping abilities with GPT-4’s processing power!\nUsing everyone’s favorite library LangChain, we’ll look at three use cases:\n\nExtracting one single part of a page\nConverting a section (or sections) of a page into GPT-parseable data without doing much prep work\nSaving effort and money by pre-processing pages we’re sending to GPT for analysis\n\nAlong the way you’ll learn how to build custom langchain tools, writng proper descriptions for them and providing the “right” kind of data when they’re done doing their work! By the end we’ll have a fully-functioning scraper that can answer natural-language questions about songs featured in TV shows."
-  },
-  {
     "objectID": "three-ways-to-scrape-langchain.html#setup",
     "href": "three-ways-to-scrape-langchain.html#setup",
     "title": "Three ways to scrape websites with GPT and custom LangChain tools",
     "section": "Setup",
-    "text": "Setup\nWe’ll start by setting up our API keys to access ChatGPT, along with importing a handful of tools.\n\n%load_ext dotenv\n%dotenv\n\nThe dotenv extension is already loaded. To reload it, use:\n  %reload_ext dotenv\n\n\n\nfrom langchain.agents import initialize_agent, Tool\nfrom langchain.tools import BaseTool\nfrom langchain.chat_models import ChatOpenAI\nfrom langchain.agents import tool\nimport requests\nfrom bs4 import BeautifulSoup\nimport json\n\nFor this use case we’re going to use GPT-4, as opposed to GPT-3.5-turbo (which is much cheaper). I’ve found GPT-4 is a lot better at understanding fragmented HTML, and we do some Python/HTML cross-pollination later on in this project which requres all the brainpower GPT can muster.\n\nllm = ChatOpenAI(model='gpt-4', temperature=0)"
+    "text": "Setup\nWe’ll start by setting up our API keys to access ChatGPT, along with importing a handful of tools.\n\n%load_ext dotenv\n%dotenv\n\n\nfrom langchain.agents import initialize_agent, Tool\nfrom langchain.tools import BaseTool\nfrom langchain.chat_models import ChatOpenAI\nfrom langchain.agents import tool\nimport requests\nfrom bs4 import BeautifulSoup\nimport json\n\nFor this use case we’re going to use GPT-4, as opposed to GPT-3.5-turbo (which is much cheaper). I’ve found GPT-4 is a lot better at understanding fragmented HTML, and we do some Python/HTML cross-pollination later on in this project which requres all the brainpower GPT can muster.\n\nllm = ChatOpenAI(model='gpt-4', temperature=0)"
   },
   {
     "objectID": "three-ways-to-scrape-langchain.html#final-thoughts",
     "href": "three-ways-to-scrape-langchain.html#final-thoughts",
     "title": "Three ways to scrape websites with GPT and custom LangChain tools",
     "section": "Final thoughts",
-    "text": "Final thoughts\nLangChain tools are great! While there are certainly other approaches to what we did above – external requests plugins, for example – combinng a small amount of manual scraping while letting GPT handle the details is a good combination of convenient and cost-effectve. Instead of sending all of the HTML (too big, too expensive) or just sending the text (too unpredictable, also potentially too large), carving out the bits you’re actually interested in can do a lot for a tiny project.\nCombine this with something like kor and your life is pretty much perfect."
+    "text": "Final thoughts\nLangChain tools are great! While there are certainly other approaches to what we did above – external requests plugins, for example – combinng a small amount of manual scraping while letting GPT handle the details is a good combination of convenient and cost-effectve. Instead of sending all of the HTML (too big, too expensive) or just sending the text (too unpredictable, also potentially too large), carving out the bits you’re actually interested in can do a lot for a tiny project.\nCombine this with something like kor or guardrails and your life is pretty much perfect."
   }
 ]

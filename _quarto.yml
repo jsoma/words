@@ -23,3 +23,4 @@ format:
     title-block: none
     title-block-banner: "#fff880"
     title-block-banner-color: black
+    highlight-style: github-dark

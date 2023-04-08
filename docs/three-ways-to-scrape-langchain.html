@@ -131,7 +131,7 @@ background: #fff880;
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
-<body class="fullcontent">
+<body>
 
 <div id="quarto-search-results"></div>
 <!-- content -->
@@ -171,7 +171,29 @@ background: #fff880;
   </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Contents</h2>
+   
+  <ul>
+  <li><a href="#introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-chatgpt" id="toc-introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-chatgpt" class="nav-link active" data-scroll-target="#introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-chatgpt">Introducing our old friend BeautifulSoup to our new best pal ChatGPT</a>
+  <ul class="collapse">
+  <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup">Setup</a></li>
+  </ul></li>
+  <li><a href="#method-one-single-element-extraction" id="toc-method-one-single-element-extraction" class="nav-link" data-scroll-target="#method-one-single-element-extraction">Method one: Single-element extraction</a></li>
+  <li><a href="#method-two-searching-parts-of-the-page" id="toc-method-two-searching-parts-of-the-page" class="nav-link" data-scroll-target="#method-two-searching-parts-of-the-page">Method two: Searching parts of the page</a>
+  <ul class="collapse">
+  <li><a href="#scrape-this-page-in-a-traditional-way-and-return-some-sort-of-formatted-list" id="toc-scrape-this-page-in-a-traditional-way-and-return-some-sort-of-formatted-list" class="nav-link" data-scroll-target="#scrape-this-page-in-a-traditional-way-and-return-some-sort-of-formatted-list">Scrape this page in a traditional way and return some sort of formatted list</a></li>
+  <li><a href="#send-the-whole-page-to-gpt-and-let-it-figure-things-out" id="toc-send-the-whole-page-to-gpt-and-let-it-figure-things-out" class="nav-link" data-scroll-target="#send-the-whole-page-to-gpt-and-let-it-figure-things-out">Send the whole page to GPT and let it figure things out</a></li>
+  <li><a href="#carve-out-the-portions-of-the-page-were-interested-in" id="toc-carve-out-the-portions-of-the-page-were-interested-in" class="nav-link" data-scroll-target="#carve-out-the-portions-of-the-page-were-interested-in">Carve out the portions of the page we’re interested in</a></li>
+  </ul></li>
+  <li><a href="#method-three-convert-your-html" id="toc-method-three-convert-your-html" class="nav-link" data-scroll-target="#method-three-convert-your-html">Method three: Convert your HTML</a>
+  <ul class="collapse">
+  <li><a href="#final-thoughts" id="toc-final-thoughts" class="nav-link" data-scroll-target="#final-thoughts">Final thoughts</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 
@@ -179,42 +201,35 @@ background: #fff880;
 
 
 <p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
-<section id="scraping-with-gpt-and-custom-langchain-tools" class="level1">
-<h1>Scraping with GPT and custom LangChain tools</h1>
-<section id="introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-openai" class="level2">
-<h2 class="anchored" data-anchor-id="introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-openai">Introducing our old friend BeautifulSoup to our new best pal OpenAI</h2>
-<p>This tutorial is two-in-one: how to build custom tools powered by large language models, along with how to combine a tiny bit of Python scraping abilities with GPT-4’s processing power!</p>
-<p>Using <a href="https://langchain.readthedocs.io/">everyone’s favorite library LangChain</a>, we’ll look at three use cases:</p>
+<section id="introducing-our-old-friend-beautifulsoup-to-our-new-best-pal-chatgpt" class="level1">
+<h1>Introducing our old friend BeautifulSoup to our new best pal ChatGPT</h1>
+<p>This tutorial is two-in-one: how to build <strong>custom LangChain tools</strong> powered by large language models, along with how to combine a tiny bit of <strong>Python scraping</strong> abilities with <strong>GPT-4</strong>’s processing power!</p>
+<p>Using <a href="https://langchain.readthedocs.io/">everyone’s favorite library LangChain</a> and the classic Python scraping library <a href="https://www.crummy.com/software/BeautifulSoup/bs4/doc/">BeautifulSoup</a>, we’ll look at three use cases:</p>
 <ol type="1">
-<li>Extracting one single part of a page</li>
+<li>Extracting one single part of a page to feed ChatGPT information</li>
 <li>Converting a section (or sections) of a page into GPT-parseable data without doing much prep work</li>
-<li>Saving effort and money by pre-processing pages we’re sending to GPT for analysis</li>
+<li>Saving effort and money by pre-processing pages we’re sending to the LLM for analysis</li>
 </ol>
 <p>Along the way you’ll learn how to build custom langchain tools, writng proper descriptions for them and providing the “right” kind of data when they’re done doing their work! By the end we’ll have a fully-functioning scraper that can answer natural-language questions about songs featured in TV shows.</p>
-</section>
 <section id="setup" class="level2">
 <h2 class="anchored" data-anchor-id="setup">Setup</h2>
 <p>We’ll start by setting up our API keys to access ChatGPT, along with importing a handful of tools.</p>
-<div class="cell" data-scrolled="true" data-execution_count="105">
+<div class="cell" data-scrolled="true" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext dotenv</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>dotenv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>The dotenv extension is already loaded. To reload it, use:
-  %reload_ext dotenv</code></pre>
-</div>
 </div>
 <div class="cell" data-execution_count="106">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.agents <span class="im">import</span> initialize_agent, Tool</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.tools <span class="im">import</span> BaseTool</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.chat_models <span class="im">import</span> ChatOpenAI</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.agents <span class="im">import</span> tool</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bs4 <span class="im">import</span> BeautifulSoup</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.agents <span class="im">import</span> initialize_agent, Tool</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.tools <span class="im">import</span> BaseTool</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.chat_models <span class="im">import</span> ChatOpenAI</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.agents <span class="im">import</span> tool</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bs4 <span class="im">import</span> BeautifulSoup</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>For this use case we’re going to use GPT-4, as opposed to GPT-3.5-turbo (which is much cheaper). I’ve found GPT-4 is a <em>lot</em> better at understanding fragmented HTML, and we do some Python/HTML cross-pollination later on in this project which requres all the brainpower GPT can muster.</p>
 <div class="cell" data-execution_count="88">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>llm <span class="op">=</span> ChatOpenAI(model<span class="op">=</span><span class="st">'gpt-4'</span>, temperature<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>llm <span class="op">=</span> ChatOpenAI(model<span class="op">=</span><span class="st">'gpt-4'</span>, temperature<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -230,21 +245,21 @@ background: #fff880;
 </div>
 <p>The results page provides a list of shows. We pull out the frst match – where <code>class</code> is <code>tf-promo-tile</code> – and send back both the URL to the show as well as the show name.</p>
 <p>If we did this manually, it might look like the code below.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the URL</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"grey's anatomy"</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com/search/site?q=</span><span class="sc">{</span>query<span class="sc">}</span><span class="ss">"</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Make the request</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract the link</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text)</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>link <span class="op">=</span> soup.select_one(<span class="st">".tf-promo-tile"</span>)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the URL and name</span></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com</span><span class="sc">{</span>link[<span class="st">'href'</span>]<span class="sc">}</span><span class="ss">"</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>name <span class="op">=</span> link[<span class="st">'title'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the URL</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>query <span class="op">=</span> <span class="st">"grey's anatomy"</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com/search/site?q=</span><span class="sc">{</span>query<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Make the request</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract the link</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>link <span class="op">=</span> soup.select_one(<span class="st">".tf-promo-tile"</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the URL and name</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com</span><span class="sc">{</span>link[<span class="st">'href'</span>]<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>name <span class="op">=</span> link[<span class="st">'title'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>That’s nice and fine, but <strong>we want to turn this into a <a href="https://python.langchain.com/en/latest/modules/agents/tools.html">LangChain tool</a></strong> that can be used to interact with the outside world. That requires two changes:</p>
 <ul>
 <li>We change this code into a function</li>
@@ -252,36 +267,36 @@ background: #fff880;
 </ul>
 <p>A simple version might look something like the code below. You provide a <code>query</code> and get back a sentence with the name and URL.</p>
 <div class="cell" data-execution_count="89">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tool</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tunefind_search(query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Searches Tunefind for a given TV show. Required to find the base URL for</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">    a given show so you can find its seasons, episodes or songs.</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">    The input to this tool should be the show we're searching for."""</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com/search/site?q=</span><span class="sc">{</span>query<span class="sc">}</span><span class="ss">"</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    soup <span class="op">=</span> BeautifulSoup(response.text)</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    link <span class="op">=</span> soup.select_one(<span class="st">".tf-promo-tile"</span>)</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com</span><span class="sc">{</span>link[<span class="st">'href'</span>]<span class="sc">}</span><span class="ss">"</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> link[<span class="st">'title'</span>]</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss"> can be found at </span><span class="sc">{</span>url<span class="sc">}</span><span class="ss">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tool</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tunefind_search(query: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Searches Tunefind for a given TV show. Required to find the base URL for</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">    a given show so you can find its seasons, episodes or songs.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">    The input to this tool should be the show we're searching for."""</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com/search/site?q=</span><span class="sc">{</span>query<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    soup <span class="op">=</span> BeautifulSoup(response.text)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    link <span class="op">=</span> soup.select_one(<span class="st">".tf-promo-tile"</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    url <span class="op">=</span> <span class="ss">f"https://www.tunefind.com</span><span class="sc">{</span>link[<span class="st">'href'</span>]<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> link[<span class="st">'title'</span>]</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="ss">f"</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss"> can be found at </span><span class="sc">{</span>url<span class="sc">}</span><span class="ss">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>To allow Langchan – and us! – to use this new search tool, we’ll create an agent that has access to it. When there’s a question that might be answered by our new tool (based on the tool description), the agent will run off and try to use it.</p>
+<p>To allow LangChain – and us! – to use this new search tool, we’ll create an agent that has access to it. When there’s a question that might be answered by our new tool (based on the tool description), the agent will run off and try to use it.</p>
 <div class="cell" data-execution_count="90">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a tool-using agent</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>tools <span class="op">=</span> [tunefind_search]</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>agent <span class="op">=</span> initialize_agent(tools, llm, agent<span class="op">=</span><span class="st">"chat-zero-shot-react-description"</span>, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a tool-using agent</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>tools <span class="op">=</span> [tunefind_search]</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>agent <span class="op">=</span> initialize_agent(tools, llm, agent<span class="op">=</span><span class="st">"chat-zero-shot-react-description"</span>, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Using this setup is as simple as <code>agent.run</code> with our question. Between the knowledge that the GPT already has and the ability to use the tool, it will try to answer our question!</p>
 <div class="cell" data-execution_count="91">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the results</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> agent.run(<span class="st">"What's the Tunefind URL for Grey's Anatomy?"</span>)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the results</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> agent.run(<span class="st">"What's the Tunefind URL for Grey's Anatomy?"</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 
@@ -331,15 +346,15 @@ The Tunefind URL for Grey's Anatomy is https://www.tunefind.com/show/greys-anato
 <p>We don’t need to do anything that would qualify as complicated scraping: no loops, nothing nested, no <code>try</code>/<code>pass</code> statements. Just “hey, take this data!”</p>
 <p>Before it goes into a LangChain tool, the code might look like the code below.</p>
 <div class="cell" data-execution_count="92">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the URL and make the request</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://www.tunefind.com/show/greys-anatomy"</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> {<span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span>}</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Grab all of the elements with a class that includes with "EpisodeListItem_title"</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text)</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>elements <span class="op">=</span> soup.select(<span class="st">"[class*='EpisodeListItem_title']"</span>)</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="bu">str</span>(elements)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the URL and make the request</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://www.tunefind.com/show/greys-anatomy"</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> {<span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span>}</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Grab all of the elements with a class that includes with "EpisodeListItem_title"</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>elements <span class="op">=</span> soup.select(<span class="st">"[class*='EpisodeListItem_title']"</span>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="bu">str</span>(elements)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="92">
 <pre><code>'[&lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-1"&gt;Season 1&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-2"&gt;Season 2&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-3"&gt;Season 3&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-4"&gt;Season 4&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-5"&gt;Season 5&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-6"&gt;Season 6&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-7"&gt;Season 7&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-8"&gt;Season 8&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-9"&gt;Season 9&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-10"&gt;Season 10&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-11"&gt;Season 11&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-12"&gt;Season 12&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-13"&gt;Season 13&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-14"&gt;Season 14&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-15"&gt;Season 15&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-16"&gt;Season 16&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-17"&gt;Season 17&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-18"&gt;Season 18&lt;/a&gt;&lt;/h3&gt;, &lt;h3 class="EpisodeListItem_title__PkSzj"&gt;&lt;a href="/show/greys-anatomy/season-19"&gt;Season 19&lt;/a&gt;&lt;/h3&gt;]'</code></pre>
 </div>
@@ -355,35 +370,35 @@ For example, if the show A Million Little Things is at https://www.tunefind.com/
 Season 3 of A Million Little Things could be found at https://www.tunefind.com/show/a-million-little-things/season-3</code></pre>
 <p>The important thing to note is that even though our last tool only found the show URL at <code>https://www.tunefind.com/show/greys-anatomy</code>, ChatGPT is smart enough to add <code>/season-1</code> on it if it knows we’re looking for season 1.</p>
 <div class="cell" data-execution_count="95">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tool</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_shows_from_season(url: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Queries Tunefind for the episode list from a given season, given the URL of the season.</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">    The input to this tool should be a URL to that season.</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co">    Season URLs are formed by takng the show's Tunefind URL and adding /season-NUM after it.</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co">    For example, if a show's URL is https://www.tunefind.com/show/a-million-little-things/</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="co">    you can find episode links for season 3 at https://www.tunefind.com/show/a-million-little-things/season-3</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    soup <span class="op">=</span> BeautifulSoup(response.text)</span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    elements <span class="op">=</span> soup.select(<span class="st">"[class*='EpisodeListItem_title']"</span>)</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">str</span>(elements)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tool</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_shows_from_season(url: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Queries Tunefind for the episode list from a given season, given the URL of the season.</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="co">    The input to this tool should be a URL to that season.</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="co">    Season URLs are formed by takng the show's Tunefind URL and adding /season-NUM after it.</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co">    For example, if a show's URL is https://www.tunefind.com/show/a-million-little-things/</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co">    you can find episode links for season 3 at https://www.tunefind.com/show/a-million-little-things/season-3</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    soup <span class="op">=</span> BeautifulSoup(response.text)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    elements <span class="op">=</span> soup.select(<span class="st">"[class*='EpisodeListItem_title']"</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">str</span>(elements)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Now that we’ve built it, it’s time to <strong>use our new tool.</strong></p>
 <p>Same process as before, but this time our agent has access to two tools: the tool that can find the show page, and the tool that can pull the episode lists from the episode page.</p>
 <div class="cell" data-execution_count="96">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a tool-using agent</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>tools <span class="op">=</span> [tunefind_search, get_shows_from_season]</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>agent <span class="op">=</span> initialize_agent(tools, llm, agent<span class="op">=</span><span class="st">"chat-zero-shot-react-description"</span>, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a tool-using agent</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>tools <span class="op">=</span> [tunefind_search, get_shows_from_season]</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>agent <span class="op">=</span> initialize_agent(tools, llm, agent<span class="op">=</span><span class="st">"chat-zero-shot-react-description"</span>, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell" data-execution_count="97">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> agent.run(<span class="st">"What is the name and URL for episode 8 season 3 for Grey's Anatomy?"</span>)</span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> agent.run(<span class="st">"What is the name and URL for episode 8 season 3 for Grey's Anatomy?"</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 
@@ -430,19 +445,19 @@ The name of episode 8 for season 3 of Grey's Anatomy is "Staring at the Sun" and
 <p>Here’s the thing: <em>I don’t want to send all that to ChatGPT</em>. I’m remarkably frugal, and while it’s great to be lazy and send everything to GPT, <strong>being lazy while using ChatGPT’s API incurs direct financial consequences.</strong> By reducing the data we send to GPT we get charged less, and that makes my wallet very very happy!</p>
 <p>In this case we’re going to write a whole scraper for the page! When given a URL, we’ll give back a list of artists and song titles.</p>
 <div class="cell" data-execution_count="98">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the page</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://www.tunefind.com/show/greys-anatomy/season-1/240"</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Scrape the content</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text)</span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>titles <span class="op">=</span> soup.select(<span class="st">"[class^='SongTitle']"</span>)</span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>artists <span class="op">=</span> soup.select(<span class="st">"[class^='ArtistSub']"</span>)</span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [{<span class="st">'artist'</span>: a.text, <span class="st">'title'</span>: t.text} <span class="cf">for</span> t, a <span class="kw">in</span> (<span class="bu">zip</span>(titles, artists))]</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Turn into a JSON string</span></span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>json.dumps(results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the page</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://www.tunefind.com/show/greys-anatomy/season-1/240"</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Scrape the content</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>titles <span class="op">=</span> soup.select(<span class="st">"[class^='SongTitle']"</span>)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>artists <span class="op">=</span> soup.select(<span class="st">"[class^='ArtistSub']"</span>)</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> [{<span class="st">'artist'</span>: a.text, <span class="st">'title'</span>: t.text} <span class="cf">for</span> t, a <span class="kw">in</span> (<span class="bu">zip</span>(titles, artists))]</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Turn into a JSON string</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>json.dumps(results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="98">
 <pre><code>'[{"artist": "The Ditty Bops", "title": "There\'s a Girl"}, {"artist": "Tegan and Sara", "title": "There\'s a Girl"}, {"artist": "The Ditty Bops", "title": "I Won\'t Be Left"}, {"artist": "stuart reid", "title": "I Won\'t Be Left"}, {"artist": "Reindeer Section", "title": "Wishful Thinking"}, {"artist": "Lisa Loeb", "title": "Wishful Thinking"}, {"artist": "Psapp", "title": "Hear You Breathing"}, {"artist": "Rilo Kiley", "title": "Hear You Breathing"}, {"artist": "Keane", "title": "You Are My Joy"}, {"artist": "Interpol", "title": "You Are My Joy"}, {"artist": "Psapp", "title": "Fools Like Me"}, {"artist": "Tegan and Sara", "title": "Fools Like Me"}]'</code></pre>
 </div>
@@ -451,36 +466,36 @@ The name of episode 8 for season 3 of Grey's Anatomy is "Staring at the Sun" and
 <p>One important thing to note is that <strong>we’re usng <code>json.dumps</code></strong> , which converts the Python object – a list of dictionaries that include artists and titles – into the string representation. We need to do this because every LangChain tool must return a string: that’s what language models understand, so that’s what we send. It looks exactly the same, but without the <code>json.dumps</code> it just won’t work.</p>
 <p>Now let’s apply this as our tool.</p>
 <div class="cell" data-execution_count="102">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tool</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_songs_from_episode(url: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Queries Tunefind for the songs for the specific episode of a show.</span></span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co">    The input to this tool should be the URL to an episode.</span></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="co">    The URL will look like https://www.tunefind.com/show/greys-anatomy/season-6/4120</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co">    You must visit the season page to obtain an episode URL</span></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    soup <span class="op">=</span> BeautifulSoup(response.text)</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>    titles <span class="op">=</span> soup.select(<span class="st">"[class^='SongTitle']"</span>)</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>    artists <span class="op">=</span> soup.select(<span class="st">"[class^='ArtistSub']"</span>)</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> [{<span class="st">'artist'</span>: a.text, <span class="st">'title'</span>: t.text} <span class="cf">for</span> t, a <span class="kw">in</span> (<span class="bu">zip</span>(titles, artists))]</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> json.dumps(results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="at">@tool</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_songs_from_episode(url: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Queries Tunefind for the songs for the specific episode of a show.</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">    The input to this tool should be the URL to an episode.</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">    The URL will look like https://www.tunefind.com/show/greys-anatomy/season-6/4120</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co">    You must visit the season page to obtain an episode URL</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    headers <span class="op">=</span> { <span class="st">'User-Agent'</span>: <span class="st">'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'</span> }</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> requests.get(url, headers<span class="op">=</span>headers)</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    soup <span class="op">=</span> BeautifulSoup(response.text)</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    titles <span class="op">=</span> soup.select(<span class="st">"[class^='SongTitle']"</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    artists <span class="op">=</span> soup.select(<span class="st">"[class^='ArtistSub']"</span>)</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> [{<span class="st">'artist'</span>: a.text, <span class="st">'title'</span>: t.text} <span class="cf">for</span> t, a <span class="kw">in</span> (<span class="bu">zip</span>(titles, artists))]</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> json.dumps(results)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Notice the grumpy demand: <code>You must visit the season page to obtain an episode URL</code>. Just like ChatGPT likes to hallucinate journalism stories and academic papers, it loves to think it knows an episode URL just by guessing a number after the season. That sentence is enough to keep it in line.</p>
 <p>Finally, <strong>we’ll string all three tools together</strong>. The show search, the episode lister, and the song lister.</p>
 <div class="cell" data-execution_count="103">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Buld the agent using all three tools</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>tools <span class="op">=</span> [tunefind_search, get_shows_from_season, get_songs_from_episode]</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>agent <span class="op">=</span> initialize_agent(tools, llm, agent<span class="op">=</span><span class="st">"chat-zero-shot-react-description"</span>, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Buld the agent using all three tools</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>tools <span class="op">=</span> [tunefind_search, get_shows_from_season, get_songs_from_episode]</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>agent <span class="op">=</span> initialize_agent(tools, llm, agent<span class="op">=</span><span class="st">"chat-zero-shot-react-description"</span>, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>And now, the moment of truth!</p>
 <div class="cell" data-execution_count="104">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> agent.run(<span class="st">"What was the song by Lisa Loeb on Grey's Anatomy season 1 episode 3?"</span>)</span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>result <span class="op">=</span> agent.run(<span class="st">"What was the song by Lisa Loeb on Grey's Anatomy season 1 episode 3?"</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 
@@ -524,7 +539,7 @@ The song by Lisa Loeb in Grey's Anatomy season 1 episode 3 is "Wishful Thinking"
 <section id="final-thoughts" class="level2">
 <h2 class="anchored" data-anchor-id="final-thoughts">Final thoughts</h2>
 <p>LangChain tools are great! While there are certainly other approaches to what we did above – external requests plugins, for example – combinng a small amount of manual scraping while letting GPT handle the details is a good combination of convenient and cost-effectve. Instead of sending all of the HTML (too big, too expensive) or just sending the text (too unpredictable, also potentially too large), carving out the bits you’re actually interested in can do a lot for a tiny project.</p>
-<p>Combine this with something like <a href="https://github.com/eyurtsev/kor">kor</a> and your life is pretty much perfect.</p>
+<p>Combine this with something like <a href="https://github.com/eyurtsev/kor">kor</a> or <a href="https://shreyar.github.io/guardrails/">guardrails</a> and your life is pretty much perfect.</p>
 
 
 </section>

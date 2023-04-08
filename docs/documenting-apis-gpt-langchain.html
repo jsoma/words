@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.272">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Jonathan Soma">
+<meta name="dcterms.date" content="2023-04-09">
+<meta name="description" content="How much documentation is enough when using an undocumented and unofficial REST API?">
+
+<title>j soma - Exploring and explaining undocumented APIs with ChatGPT and LangChain</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-1W7890GDTM"></script>
+
+<script type="text/javascript">
+
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-1W7890GDTM', { 'anonymize_ip': true});
+</script>
+<style>
+    .quarto-title-block .quarto-title-banner,
+    .quarto-title-block .quarto-title-banner h1,
+    .quarto-title-block .quarto-title-banner h2,
+    .quarto-title-block .quarto-title-banner h3,
+    .quarto-title-block .quarto-title-banner h4,
+    .quarto-title-block .quarto-title-banner h5,
+    .quarto-title-block .quarto-title-banner h6
+    {
+      color: black;
+background: #fff880;
+    }
+    </style>
+<script src="site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+
+<link rel="stylesheet" href="style.css">
+<meta property="og:title" content="j soma - Exploring and explaining undocumented APIs with ChatGPT and LangChain">
+<meta property="og:description" content="How much documentation is enough when using an undocumented and unofficial REST API?">
+<meta property="og:image" content="https://jonathansoma.com/words/assets/where-are-things.png">
+<meta property="og:site-name" content="j soma">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:title" content="j soma - Exploring and explaining undocumented APIs with ChatGPT and LangChain">
+<meta name="twitter:description" content="How much documentation is enough when using an undocumented and unofficial REST API?">
+<meta name="twitter:image" content="https://jonathansoma.com/words/assets/where-are-things.png">
+<meta name="twitter:creator" content="@dangerscarf">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body>
+
+<div id="quarto-search-results"></div>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Exploring and explaining undocumented APIs with ChatGPT and LangChain</h1>
+                  <div>
+        <div class="description">
+          How much documentation is enough when using an undocumented and unofficial REST API?
+        </div>
+      </div>
+                </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      <div>
+      <div class="quarto-title-meta-heading">Author</div>
+      <div class="quarto-title-meta-contents">
+               <p>Jonathan Soma </p>
+            </div>
+    </div>
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">April 9, 2023</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Contents</h2>
+   
+  <ul>
+  <li><a href="#the-secret-world-of-undocumented-apis" id="toc-the-secret-world-of-undocumented-apis" class="nav-link active" data-scroll-target="#the-secret-world-of-undocumented-apis">The secret world of undocumented APIs</a>
+  <ul class="collapse">
+  <li><a href="#setup" id="toc-setup" class="nav-link" data-scroll-target="#setup">Setup</a></li>
+  </ul></li>
+  <li><a href="#langchain-and-documented-apis" id="toc-langchain-and-documented-apis" class="nav-link" data-scroll-target="#langchain-and-documented-apis">LangChain and documented APIs</a></li>
+  <li><a href="#automatic-documentation-generation" id="toc-automatic-documentation-generation" class="nav-link" data-scroll-target="#automatic-documentation-generation">Automatic documentation generation</a></li>
+  <li><a href="#explicit-documentation" id="toc-explicit-documentation" class="nav-link" data-scroll-target="#explicit-documentation">Explicit documentation</a></li>
+  <li><a href="#implicit-documentation" id="toc-implicit-documentation" class="nav-link" data-scroll-target="#implicit-documentation">Implicit documentation</a></li>
+  <li><a href="#summary-and-differences" id="toc-summary-and-differences" class="nav-link" data-scroll-target="#summary-and-differences">Summary and differences</a>
+  <ul class="collapse">
+  <li><a href="#success-rates" id="toc-success-rates" class="nav-link" data-scroll-target="#success-rates">Success rates</a></li>
+  <li><a href="#costs" id="toc-costs" class="nav-link" data-scroll-target="#costs">Costs</a></li>
+  <li><a href="#the-takeaway" id="toc-the-takeaway" class="nav-link" data-scroll-target="#the-takeaway">The takeaway</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+<p>Hi, I’m Soma! You can find me on email at <a href="mailto:jonathan.soma@gmail.com">jonathan.soma@gmail.com</a>, on Twitter at <a href="https://twitter.com/dangerscarf"><span class="citation" data-cites="dangerscarf">@dangerscarf</span></a>, or maybe even on <a href="https://tinyletter.com/jsoma">this newsletter I’ve never sent</a>.</p>
+<section id="the-secret-world-of-undocumented-apis" class="level1">
+<h1>The secret world of undocumented APIs</h1>
+<p>While scraping a website is all good and fun, sometimes there’s a better/faster/cheaper way to get your data: <strong>undocumented APIs!</strong></p>
+<p>An API is how two computers talk to each other without the ugliness of the web getting involved. To be overly simplistic, instead of browsing a site like a normal human being, your computer visits a special URL to search or download data in bulk. For example, Twitter’s API is how researchers got millions and millions of tweets before Musk locked ’em all out.</p>
+<p>While many APIs are public-facing and advertised, some are semi-secret or unofficial. For example, when you visit <a href="https://pitchfork.com">Pitchfork</a> and search for music reviews, your browser secretly visits <a href="https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0">this URL</a> to find the data that it eventually displays on the page. That listing of data – the API “endpoint” – is all about computers reading it, not people, so it looks awful and ugly and very much like this:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>{<span class="st">"count"</span>:<span class="dv">10000</span>,<span class="st">"previous"</span>:null,<span class="st">"next"</span>:null,<span class="st">"results"</span>:{<span class="st">"category"</span>:null,<span class="st">"list"</span>:[{<span class="st">"dek"</span>:<span class="st">"&lt;p&gt;The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs.&lt;/p&gt;</span><span class="ch">\n</span><span class="st">"</span>,<span class="st">"seoDescription"</span>:<span class="st">"The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs."</span>,<span class="st">"promoDescription"</span>:<span class="st">"&lt;p&gt;The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs.&lt;/p&gt;</span><span class="ch">\n</span><span class="st">"</span>,<span class="st">"socialDescription"</span>:<span class="st">"The pop trio’s new single casts the iconic 24-hour breakfast chain as a place of conversation and healing, not fights and thrown chairs."</span>,<span class="st">"authors"</span>:[{<span class="st">"id"</span>:<span class="st">"592604b57fd06e5349102f43"</span>,<span class="st">"name"</span>:<span class="st">"Evan Minsker"</span>,<span class="st">"title"</span>:<span class="st">"Associate News Director"</span>,<span class="st">"url"</span>:<span class="st">"/staff/evan-minsker/"</span>,<span class="st">"slug"</span>:<span class="st">"staff/evan-minsker"</span>}]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Horrifying, right? In this tutorial, we’ll be looking at three things:</p>
+<ol type="1">
+<li>Exploring how LangChain talks to APIs</li>
+<li>Using ChatGPT to document previously-undocumented APIs</li>
+<li>Comparing two techniques for enabling LangChain to use undocumented APIs (explicit vs implicit documentation)</li>
+</ol>
+<p>By the end we’ll have developed a tool that can use the unofficial Pitchfork API to answer natural-language questions about albums they’ve reviewed.</p>
+<div class="callout callout-style-simple callout-note">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-body-container">
+<p>Want to learn how to discover undocumented APIs? Check out <a href="https://inspectelement.org/apis.html">Inspect Element</a> by <a href="https://twitter.com/leonYin/">Leon Yin</a>!</p>
+</div>
+</div>
+</div>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<p>Give me one moment to set things up! First we’ll pull in all of our API keys using <a href="https://pypi.org/project/python-dotenv/">python-dotenv</a>, then we’ll use a thousand and one imports to bring in LangChain and friends.</p>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>load_ext dotenv</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>dotenv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="144">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># LangChain imports</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.agents <span class="im">import</span> initialize_agent</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.chat_models <span class="im">import</span> ChatOpenAI</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.chains <span class="im">import</span> APIChain</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.prompts.prompt <span class="im">import</span> PromptTemplate</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.callbacks <span class="im">import</span> get_openai_callback</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain <span class="im">import</span> LLMChain</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Normal human imports</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bs4 <span class="im">import</span> BeautifulSoup</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Even though GPT-4 is out, we’ll be using GPT-3.5-turbo for this one. At the moment it’s infinitely cheaper, and every penny matters!</p>
+<div class="cell" data-execution_count="113">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>llm <span class="op">=</span> ChatOpenAI(model<span class="op">=</span><span class="st">'gpt-3.5-turbo'</span>, temperature<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+</section>
+<section id="langchain-and-documented-apis" class="level1">
+<h1>LangChain and documented APIs</h1>
+<p><a href="https://python.langchain.com">LangChain</a> is a “framework for developing applications powered by language models,” which really undersells the fact that it’s a universe-altering suite of tools for putting GPT (and related tools) to work. In this tutorial we’re focusing on how it <strong>interacts with APIs.</strong></p>
+<p>In the <a href="https://python.langchain.com/en/latest/modules/chains/examples/api.html">LangChain documentation for working with APIs</a> there’s a super-simple example of using <code>APIChain</code> to get an answer from a <a href="https://open-meteo.com/">free weather API</a>. You create your API-aware “chain” from two things: your large language model (in this case, GPT-3.5-turbo) and the documentation to the API.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>chain <span class="op">=</span> APIChain.from_llm_and_api_docs(llm, open_meteo_docs.OPEN_METEO_DOCS, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Once your chain is created, you ask it your question and the chain goes to work sending information back and forth with ChatGPT:</p>
+<ol type="1">
+<li>The chain sends the API docs to ChatGPT, asking what API URL you should visit</li>
+<li>ChatGPT reads the docs, sends back a URL</li>
+<li>LangChain obtains the data from the URL</li>
+<li>The data is sent back to ChatGPT, which uses it to answer your question</li>
+</ol>
+<p>Let’s see it in action:</p>
+<div class="cell" data-execution_count="114">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>chain.run(<span class="st">'What is the weather like right now in Munich, Germany in degrees Farenheit?'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://api.open-meteo.com/v1/forecast?latitude=48.137154&amp;longitude=11.576124&amp;current_weather=true&amp;temperature_unit=fahrenheit
+{"latitude":48.14,"longitude":11.58,"generationtime_ms":0.15795230865478516,"utc_offset_seconds":0,"timezone":"GMT","timezone_abbreviation":"GMT","elevation":526.0,"current_weather":{"temperature":40.2,"windspeed":8.8,"winddirection":261.0,"weathercode":2,"is_day":0,"time":"2023-04-08T00:00"}}
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="114">
+<pre><code>'The current weather in Munich, Germany is 40.2 degrees Fahrenheit.'</code></pre>
+</div>
+</div>
+<p>You can see each step of the process: the URL, the data, the answer! This transparency is thanks to us using <code>verbose=True</code> when we first created the chain.</p>
+<p>The “secret sauce” of the <code>APIChain</code> formula is the OpenMeteo API documentation. The documentation is detailed enough to provide ChatGPT with everything it needs to know in creating the API URL: from what I can see, it needs a latitude and longitude, a <code>current_weather=true</code>, and a demand to be in degrees fahrenheit.</p>
+<p>How detailed is the OpenMeteo documentation that ChatGPT is using? It’s easy enough to examine the documentation for this particular API, as it’s actually provided as part of LangChain:</p>
+<div class="cell" data-execution_count="115">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(open_meteo_docs.OPEN_METEO_DOCS)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>BASE URL: https://api.open-meteo.com/
+
+API Documentation
+The API endpoint /v1/forecast accepts a geographical coordinate, a list of weather variables and responds with a JSON hourly weather forecast for 7 days. Time always starts at 0:00 today and contains 168 hours. All URL parameters are listed below:
+
+Parameter   Format  Required    Default Description
+latitude, longitude Floating point  Yes     Geographical WGS84 coordinate of the location
+hourly  String array    No      A list of weather variables which should be returned. Values can be comma separated, or multiple &amp;hourly= parameter in the URL can be used.
+daily   String array    No      A list of daily weather variable aggregations which should be returned. Values can be comma separated, or multiple &amp;daily= parameter in the URL can be used. If daily weather variables are specified, parameter timezone is required.
+current_weather Bool    No  false   Include current weather conditions in the JSON output.
+temperature_unit    String  No  celsius If fahrenheit is set, all temperature values are converted to Fahrenheit.
+windspeed_unit  String  No  kmh Other wind speed speed units: ms, mph and kn
+precipitation_unit  String  No  mm  Other precipitation amount units: inch
+timeformat  String  No  iso8601 If format unixtime is selected, all time values are returned in UNIX epoch time in seconds. Please note that all timestamp are in GMT+0! For daily values with unix timestamps, please apply utc_offset_seconds again to get the correct date.
+timezone    String  No  GMT If timezone is set, all timestamps are returned as local-time and data is returned starting at 00:00 local-time. Any time zone name from the time zone database is supported. If auto is set as a time zone, the coordinates will be automatically resolved to the local time zone.
+past_days   Integer (0-2)   No  0   If past_days is set, yesterday or the day before yesterday data are also returned.
+start_date
+end_date    String (yyyy-mm-dd) No      The time interval to get weather data. A day must be specified as an ISO8601 date (e.g. 2022-06-30).
+models  String array    No  auto    Manually select one or more weather models. Per default, the best suitable weather models will be combined.
+
+Hourly Parameter Definition
+The parameter &amp;hourly= accepts the following values. Most weather variables are given as an instantaneous value for the indicated hour. Some variables like precipitation are calculated from the preceding hour as an average or sum.
+
+Variable    Valid time  Unit    Description
+temperature_2m  Instant °C (°F) Air temperature at 2 meters above ground
+snowfall    Preceding hour sum  cm (inch)   Snowfall amount of the preceding hour in centimeters. For the water equivalent in millimeter, divide by 7. E.g. 7 cm snow = 10 mm precipitation water equivalent
+rain    Preceding hour sum  mm (inch)   Rain from large scale weather systems of the preceding hour in millimeter
+showers Preceding hour sum  mm (inch)   Showers from convective precipitation in millimeters from the preceding hour
+weathercode Instant WMO code    Weather condition as a numeric code. Follow WMO weather interpretation codes. See table below for details.
+snow_depth  Instant meters  Snow depth on the ground
+freezinglevel_height    Instant meters  Altitude above sea level of the 0°C level
+visibility  Instant meters  Viewing distance in meters. Influenced by low clouds, humidity and aerosols. Maximum visibility is approximately 24 km.</code></pre>
+</div>
+</div>
+<p>Look at all those details and options! It might be overwhelming to us, but ChatGPT has no problem figuring it out.</p>
+<p>If we want to use the <a href="https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0">Pitchfork API</a> to ask questions in a similar fashion, it seems like we might need some documentation for it.</p>
+<p>There’s only one problem: <strong>it’s an unofficial, undocumented API.</strong></p>
+</section>
+<section id="automatic-documentation-generation" class="level1">
+<h1>Automatic documentation generation</h1>
+<p>Luckily for us, APIs aren’t (often) all that complicated. Let’s look at the Pitchfork API’s URL:</p>
+<pre><code>https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0</code></pre>
+<p>After the <code>/search/</code> part, we see a lot of things we can making assumptions about.</p>
+<ul>
+<li><code>size=5</code> probably has to do with how many results are returned. In this case, our search gives us 5 results.</li>
+<li><code>genre=jazz&amp;genre=metal</code> is probably all of the genres of albums to return</li>
+<li><code>rating_from=0.0</code> potentially sets a lower bar for the rating of the album reviews. Pitchfork ranks them 0-10, so this includes all albums.</li>
+<li>There’s also <code>types</code>, <code>sort</code>, <code>start</code>… We can guess about those, too!</li>
+</ul>
+<p>Do we know that our guesses are correct? Absolutely not. But with a little time and some manual labor, we might be able to test our hypotheses about what each parameter actually means!</p>
+<p>But we have neither time or manual labor: we’re playing loose and fast with the truth, we’re moving fast and breaking things, we’re fucking around and hopefully only finding out beautiful, blissful things. Instead, we have AI.</p>
+<p>Let’s just irresponsibly ask ChatGPT to make all of those assumptions for us, and write some nice beautiful documentation just like the OpenMeteo ones!</p>
+<p>Down below we build a prompt that takes an API url and asks ChatGPT to write us “detailed documentation” for the provided URL.</p>
+<div class="cell" data-execution_count="136">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> langchain.prompts <span class="im">import</span> PromptTemplate</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>prompt <span class="op">=</span> PromptTemplate(</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    input_variables<span class="op">=</span>[<span class="st">"api_url"</span>],</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    template<span class="op">=</span><span class="st">"""Act as a technical writer. Write detailed documentation for the API that exists at </span><span class="sc">{api_url}</span><span class="st">. Only detail the request, do not describe the response. Do not include any parameters not in the sample endpoint."""</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>chain <span class="op">=</span> LLMChain(</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    llm<span class="op">=</span>llm,</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    verbose<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    prompt<span class="op">=</span>prompt</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The code is slightly more complicated than I’d like, as a few weeks ago LangChain decided that chat-based LLMs like GPT-3.5 needed to be talked to with prompts instead of just saying <code>llm.run</code>. I’m sorry it’s a little verbose, but we’ll both survive.</p>
+<p>Notice my extra-stern warning to not provide an example response. While we’re fine with ChatGPT inventing how to use it, we’d rather not have it waste time inventing data that comes back from the API exactly looks like.</p>
+<p>Now we’ll take our Pitchfork API url and feed it into the chain.</p>
+<div class="cell" data-execution_count="137">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>url <span class="op">=</span> <span class="st">"https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate</span><span class="sc">%20d</span><span class="st">esc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0"</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> chain.run(url)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(response)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new LLMChain chain...
+Prompt after formatting:
+Act as a technical writer. Write detailed documentation for the API that exists at https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0. Only detail the request, do not describe the response. Do not include any parameters not in the sample endpoint.
+
+&gt; Finished chain.
+API Documentation
+
+Pitchfork Search API
+
+This API is used to search for reviews on Pitchfork based on specified genres, types, sorting, and size.
+
+Sample Endpoint:
+
+https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0
+
+Request Method: GET
+
+Request Parameters:
+
+• genre: This parameter is used to specify the genre of the review. You can specify multiple genres by adding the parameter multiple times. Possible values are experimental, global, jazz, metal, pop, rap, and rock.
+
+• types: This parameter is used to specify the type of the content you want to retrieve. The possible values are reviews, features, tracks, labels, and artists.
+
+• sort: This parameter is used to specify the sorting order of the content you want to retrieve. The possible values are publishdate desc, publishdate asc, position desc, and position asc. You can specify multiple sorting orders by separating them with commas.
+
+• size: This parameter is used to specify the number of results that you want to retrieve. The possible values are integers between 1 and 100.
+
+• start: This parameter is used to specify the starting position for the search, to retrieve the next "page" of results. The possible values are integers greater than or equal to 0.
+
+• rating_from: This parameter is used to specify the minimum rating for the content you want to retrieve. The possible values are decimal numbers between 0.0 and 10.0.
+
+Response Format:
+
+The response format for this API is in JSON.
+
+Authentication:
+
+No authentication is required to use this API.
+
+Error Codes:
+
+The following response codes may be returned by the API:
+
+• 200 OK: Successful request.
+• 400 Bad Request: Invalid parameters.
+• 401 Unauthorized: Authentication required.
+• 403 Forbidden: Access denied.
+• 404 Not Found: Resource not found.
+• 500 Internal Server Error: Server error.
+
+Limitations:
+
+• This API is subject to rate limiting.
+• The maximum size of a search result is 100.
+• Some parameters may not be compatible with each other - for example, using both sorting and start parameters may lead to unexpected behavior.
+
+Examples:
+
+To retrieve the 5 most recent reviews for the experimental, jazz, and pop genres, the request URL would be:
+
+https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=jazz&amp;genre=pop&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0
+
+To retrieve the top 5 highest-rated metal reviews, the request URL would be:
+
+https://pitchfork.com/api/v2/search/?genre=metal&amp;types=reviews&amp;sort=position%20asc&amp;size=5&amp;start=0&amp;rating_from=8.0
+
+To retrieve the next 5 results from a previous query, the request URL would be:
+
+https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=jazz&amp;genre=pop&amp;types=reviews&amp;sort=publishdate%20desc%2Cposition%20asc&amp;size=5&amp;start=5&amp;rating_from=0.0</code></pre>
+</div>
+</div>
+<p>That documentation is far nicer than anything I’d personally write!</p>
+<p>Is it all correct? <strong>We have no idea!</strong> But to continue thinking positively: if we found a bug we can always make manual edits.</p>
+<p>Now let’s talk about how we want to use it.</p>
+</section>
+<section id="explicit-documentation" class="level1">
+<h1>Explicit documentation</h1>
+<p>I’m going to call the type of text above <strong>explicit documentation</strong>. It’s “real” documentation, words phrased and formatted in order to communicate specific details about and examples of the API.</p>
+<p>This explicit documentation is just like the OpenMeteo documentation from the LangChain documentation, and we’re going to use it in the exact same way. We’ll make a new <code>APIChain</code>, giving it the language model and the API docs.</p>
+<p>After the chain is made, we’ll ask it our question: it should use the documentation to format a URL, then use the data from the URL to answer the question.</p>
+<div class="cell" data-execution_count="138">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the response from above as `explicit_docs`, to use later</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>explicit_docs <span class="op">=</span> response</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>explicit_chain <span class="op">=</span> APIChain.from_llm_and_api_docs(llm, explicit_docs, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="139">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> explicit_chain.run(<span class="st">"What was the first rap album reviewed by pitchfork?"</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(response)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;rating_from=0.0
+{"count":4253,"previous":null,"next":null,"results":{"category":null,"list":[{"tombstone":{"bnm":false,"bnr":false,"albums":[{"id":"5929c3a7eb335119a49ed773","album":{"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"display_name":"Brand New Secondhand","labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"release_year":1999,"photos":{"tout":{"width":150,"height":150,"credit":"","caption":"","altText":"Image may contain: Display, Screen, Electronics, Monitor, Television, and TV","title":"Brand New Secondhand cover art","sizes":{"list":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_160/c23e052b.gif","standard":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_600/c23e052b.gif","homepageSmall":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_55/c23e052b.gif","homepageLarge":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_320/c23e052b.gif"}},"lede":false,"social":false}},"rating":{"display_rating":"9.5","rating":"9.5","bnm":false,"bnr":false},"labels_and_years":[{"labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"year":1999}]}]},"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"channel":"","subChannel":"","position":6,"id":"5929e2b6c0084474cd0c4dc2","url":"/reviews/albums/5099-brand-new-secondhand/","contentType":"albumreview","title":"&lt;em&gt;Brand New Secondhand&lt;/em&gt;","seoTitle":"Brand New Secondhand","socialTitle":"Roots Manuva: Brand New Secondhand","promoTitle":"Brand New Secondhand","authors":[{"id":"592604af17cea934e4daf5f4","name":"Paul Cooper","title":"Contributor","url":"/staff/paul-cooper/","slug":"staff/paul-cooper"}],"pubDate":"1999-03-23T06:00:06.000Z","timestamp":922168806000,"modifiedAt":"2022-03-31T08:47:24.426Z","dek":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","seoDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","promoDescription":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","socialDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","privateTags":["_dj_id:5099","_original_author_id:95"],"tags":[]}]}}
+
+&gt; Finished chain.
+The first rap album reviewed by Pitchfork was "Brand New Secondhand" by Roots Manuva, with a rating of 9.5. The review was published on March 23, 1999.</code></pre>
+</div>
+</div>
+<p>The URL it chose to visit was</p>
+<pre><code>https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;rating_from=0.0</code></pre>
+<p>It adjusted the genre list, the publish date, and decided it only needed a single result! That seems pretty remarkable to me, and the result of an album from 1999 also seems reasonable.</p>
+</section>
+<section id="implicit-documentation" class="level1">
+<h1>Implicit documentation</h1>
+<p>While the explicit documentation above is pretty fantastic, <strong>it also might be a waste of time.</strong> Think about it: if ChatGPT generates a new URL by reading the documentation it created by reading the single URL…</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+  A[URL] --&gt; B[Documentation]
+  B --&gt; C[New URL]
+</pre>
+</div>
+</div>
+</div>
+</div>
+<p>…why can’t we just cut out the middleman? Can’t we just say, “here’s a sample URL, figure out the new one?”</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<div>
+<pre class="mermaid mermaid-js">flowchart LR
+  A[URL] -.- B[Documentation]
+  B -.- C[New URL]
+  A ==&gt; C
+</pre>
+</div>
+</div>
+</div>
+</div>
+<p>The documentation isn’t providing anything it doesn’t know already, so it seems reasonable, right? Let’s try it now! Now we’re going to create <strong>implicit docs</strong>, which briefly describe the existence of the API and give a sample endpoint. Instead of all that detail, it’s just the one URL!</p>
+<div class="cell" data-execution_count="140">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>implicit_docs <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="st">Pitchfork has an API with a sample endpoint at https://pitchfork.com/api/v2/search/?genre=experimental&amp;genre=global&amp;genre=jazz&amp;genre=metal&amp;genre=pop&amp;genre=rap&amp;genre=rock&amp;types=reviews&amp;sort=publishdate</span><span class="sc">%20d</span><span class="st">esc%2Cposition%20asc&amp;size=5&amp;start=0&amp;rating_from=0.0</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>implicit_chain <span class="op">=</span> APIChain.from_llm_and_api_docs(llm, implicit_docs, verbose<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>What are you expecting?</strong> Let’s give it a shot.</p>
+<div class="cell" data-execution_count="141">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>implicit_chain.run(<span class="st">"What was the first rap album reviewed by pitchfork?"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+
+&gt; Entering new APIChain chain...
+https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;start=0&amp;rating_from=0.0
+{"count":4253,"previous":null,"next":null,"results":{"category":null,"list":[{"tombstone":{"bnm":false,"bnr":false,"albums":[{"id":"5929c3a7eb335119a49ed773","album":{"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"display_name":"Brand New Secondhand","labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"release_year":1999,"photos":{"tout":{"width":150,"height":150,"credit":"","caption":"","altText":"Image may contain: Display, Screen, Electronics, Monitor, Television, and TV","title":"Brand New Secondhand cover art","sizes":{"list":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_160/c23e052b.gif","standard":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_600/c23e052b.gif","homepageSmall":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_55/c23e052b.gif","homepageLarge":"https://media.pitchfork.com/photos/5929c3a7c0084474cd0c3506/1:1/w_320/c23e052b.gif"}},"lede":false,"social":false}},"rating":{"display_rating":"9.5","rating":"9.5","bnm":false,"bnr":false},"labels_and_years":[{"labels":[{"id":"592608737fd06e5349102fdb","name":"Ninja Tune","display_name":"Ninja Tune"},{"id":"59260899c31f3f3472b1d6cc","name":"Big Dada","display_name":"Big Dada"}],"year":1999}]}]},"artists":[{"id":"592994259d034d5c69bf1739","display_name":"Roots Manuva","url":"/artists/2672-roots-manuva/","genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"slug":"592994259d034d5c69bf1739","photos":{"tout":{"width":300,"height":300,"credit":"","caption":"","altText":"Image may contain: Face, Human, Person, Roots Manuva, Head, Photo, Portrait, and Photography","modelName":"photo","title":"Roots Manuva artist image","sizes":{"sm":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_150/3d81e0d6.jpg","m":"https://media.pitchfork.com/photos/59299426c0084474cd0bec29/1:1/w_300/3d81e0d6.jpg"}},"lede":false,"social":false}}],"genres":[{"display_name":"Electronic","slug":"electronic"},{"display_name":"Jazz","slug":"jazz"},{"display_name":"Rap","slug":"rap"}],"channel":"","subChannel":"","position":6,"id":"5929e2b6c0084474cd0c4dc2","url":"/reviews/albums/5099-brand-new-secondhand/","contentType":"albumreview","title":"&lt;em&gt;Brand New Secondhand&lt;/em&gt;","seoTitle":"Brand New Secondhand","socialTitle":"Roots Manuva: Brand New Secondhand","promoTitle":"Brand New Secondhand","authors":[{"id":"592604af17cea934e4daf5f4","name":"Paul Cooper","title":"Contributor","url":"/staff/paul-cooper/","slug":"staff/paul-cooper"}],"pubDate":"1999-03-23T06:00:06.000Z","timestamp":922168806000,"modifiedAt":"2022-03-31T08:47:24.426Z","dek":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","seoDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","promoDescription":"&lt;p&gt;For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...&lt;/p&gt;\n","socialDescription":"For politcially unaware, socially unconscious, ethically moribund pop culture vultures, there's no bigger disappointment than UK hip-hop. In the ...","privateTags":["_dj_id:5099","_original_author_id:95"],"tags":[]}]}}
+
+&gt; Finished chain.</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="141">
+<pre><code>'The first rap album reviewed by Pitchfork was "Brand New Secondhand" by Roots Manuva, published on March 23, 1999, with a rating of 9.5. The API call used to retrieve this information was: https://pitchfork.com/api/v2/search/?genre=rap&amp;types=reviews&amp;sort=publishdate%20asc&amp;size=1&amp;start=0&amp;rating_from=0.0.'</code></pre>
+</div>
+</div>
+<p>That’s an A+ perfect response, with a heck of a lot less work.</p>
+</section>
+<section id="summary-and-differences" class="level1">
+<h1>Summary and differences</h1>
+<p>There are two major ways the explicit and implicit approaches differ: success rates and costs.</p>
+<section id="success-rates" class="level2">
+<h2 class="anchored" data-anchor-id="success-rates">Success rates</h2>
+<p>Believe it or not, <strong>the implicit approach has a much higher success rate!</strong></p>
+<p>In writing this piece, I’ve had to tweak the prompt that generates the explicit documentation again and again. ChatGPT seems to go out of its way to lie about the API, and not even in subtle ways:</p>
+<ul>
+<li>It loves to introduce new, non-existent features</li>
+<li>Turn the <code>genre=rap&amp;genre=folk</code> parameter into various flavors of <code>genre=rap,folk</code>, and just generally sacrifices the reality of the API for</li>
+<li>Invent lower and upper bounds for page sizes and ratings</li>
+</ul>
+<p>While these might be good architectural changes or useful new features, they absolutely aren’t implied by the original URL! Without adding a push to be conservative to the prompt, we end up with docs that are completely misleading.</p>
+<p>When you take the misleading documentation and feed it to the <code>APIChain</code> prompt, it winds up screwing up the request a large portion of the time. Overall I’ve found it breaks about a third of the time on the explicitly-documented example!</p>
+<p>On the other hand, explicit documentation allows you to clean up and customize the docs. If you find out the maximum and minimum page size, you’re free to add it! If other genres get released or removed you’re more than welcome to edit the list.</p>
+<p>But if you’re lazy, and just looking for a shortcut? <strong>Implicit docs always peform better</strong>.</p>
+</section>
+<section id="costs" class="level2">
+<h2 class="anchored" data-anchor-id="costs">Costs</h2>
+<p>While we’re all very excited about using the various OpenAI APIs, <strong>they do cost money.</strong> Yes, <code>GPT-3.5-turbo</code> is remarkably inexpensive compared to its peers, but we aren’t here to waste money! If we can keep the prompt smaller our queries cost less, and saving money is the second-quickest route to happiness.</p>
+<p>Let’s use LangChain’s <code>get_openai_callback</code> to examine the token count and cost of our explicit vs implicit requests. Note that we’re using <code>verbose=False</code> here to reduce clutter.</p>
+<div class="cell" data-execution_count="142">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>explicit_chain <span class="op">=</span> APIChain.from_llm_and_api_docs(llm, explicit_docs, verbose<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> get_openai_callback() <span class="im">as</span> cb:</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> explicit_chain.run(<span class="st">"What was the first rap album reviewed by pitchfork?"</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Response: </span><span class="sc">{</span>response<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Total Tokens: </span><span class="sc">{</span>cb<span class="sc">.</span>total_tokens<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Prompt Tokens: </span><span class="sc">{</span>cb<span class="sc">.</span>prompt_tokens<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Completion Tokens: </span><span class="sc">{</span>cb<span class="sc">.</span>completion_tokens<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Total Cost (USD): $</span><span class="sc">{</span>cb<span class="sc">.</span>total_cost<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Response: The first rap album reviewed by Pitchfork was Roots Manuva's "Brand New Secondhand" released in 1999, with a review published on March 23, 1999, with a rating of 9.5.
+Total Tokens: 3058
+Prompt Tokens: 2970
+Completion Tokens: 88
+Total Cost (USD): $0.006116</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="143">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>implicit_chain <span class="op">=</span> APIChain.from_llm_and_api_docs(llm, implicit_docs, verbose<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> get_openai_callback() <span class="im">as</span> cb:</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    response <span class="op">=</span> implicit_chain.run(<span class="st">"What was the first rap album reviewed by pitchfork?"</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Response: </span><span class="sc">{</span>response<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Total Tokens: </span><span class="sc">{</span>cb<span class="sc">.</span>total_tokens<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Prompt Tokens: </span><span class="sc">{</span>cb<span class="sc">.</span>prompt_tokens<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Completion Tokens: </span><span class="sc">{</span>cb<span class="sc">.</span>completion_tokens<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Total Cost (USD): $</span><span class="sc">{</span>cb<span class="sc">.</span>total_cost<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Response: The first rap album reviewed by Pitchfork was "Brand New Secondhand" by Roots Manuva, with a rating of 9.5. The review was written by Paul Cooper and was published on March 23, 1999.
+Total Tokens: 1811
+Prompt Tokens: 1722
+Completion Tokens: 89
+Total Cost (USD): $0.0036220000000000002</code></pre>
+</div>
+</div>
+<p>Along with being consistent less correct, <strong>the explicit chain costs around twice as much!</strong> Just above 0.6 cents for explicit compared to <code>0.36</code> for implicit. Depending on how wordy GPT decides to be, some of my tests have seen it up to tree times as much!</p>
+<p>The wildest part about this large difference is that both queries almost always making the <em>same</em> API response, which I assume would take up the bulk of the tokens (secret fact: Pitchfork’s API is so wordy I changed the example to <code>size=5</code> so that it would fit in the GPT-3.5-turbo context window).</p>
+</section>
+<section id="the-takeaway" class="level2">
+<h2 class="anchored" data-anchor-id="the-takeaway">The takeaway</h2>
+<p>Unless you enjoy editing or spending money, it looks like <em>less is more</em>.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
